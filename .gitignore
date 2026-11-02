@@ -1,0 +1,30 @@
+# Variáveis de ambiente e credenciais locais
+.env
+.env.*
+!.env.example
+
+# Ambientes virtuais Python
+.venv/
+venv/
+
+# Arquivos gerados pelo Python
+__pycache__/
+*.py[cod]
+
+# Cache de testes e relatórios de cobertura
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Dependências e arquivos gerados pelo frontend
+node_modules/
+dist/
+.vite/
+
+# Logs
+*.log
+
+# Arquivos locais do sistema operacional
+.DS_Store
+Thumbs.db
