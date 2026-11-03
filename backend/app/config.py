@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Literal
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
@@ -16,5 +17,9 @@ class Setting(BaseSettings):
     db_name: str
     db_user: str
     db_password: SecretStr
+
+    ai_mode: Literal["mock", "gemini"] = "mock"
+    gemini_model: str = "gemini-3.5-flash-lite"
+    gemini_api_key: SecretStr | None = None
 
 settings = Setting()

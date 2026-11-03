@@ -6,6 +6,7 @@ import type { FinancialSummary } from './services/api'
 import './App.css'
 import FinancialEntryPanel from './components/FinancialEntryPanel'
 import ImportPanel from './components/ImportPanel'
+import CopilotPanel from './components/CopilotPanel'
 
 function getInitialPeriod() {
   const now = new Date()
@@ -130,6 +131,7 @@ function App() {
           )}
         </section>
       )}
+      <CopilotPanel />
       <ImportPanel />
       <FinancialEntryPanel />
       <CategoriesPanel />
