@@ -195,3 +195,74 @@ select:focus-visible {
   outline: 3px solid #689e91;
   outline-offset: 3px;
 }
+
+.import-panel {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid #dbe5df;
+}
+
+.import-review {
+  padding: 24px;
+  border: 1px solid #dbe5df;
+  border-radius: 16px;
+  background: white;
+}
+
+.import-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 16px;
+}
+
+.import-counts dt {
+  color: #526962;
+}
+
+.import-counts dd {
+  margin: 8px 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.import-review details {
+  margin: 20px 0;
+}
+
+.import-review summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table-scroll th,
+.table-scroll td {
+  padding: 12px;
+  border-bottom: 1px solid #dbe5df;
+  vertical-align: top;
+}
+
+.partial-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 24px 0;
+}
+
+.import-review > button {
+  margin: 8px 12px 8px 0;
+}
+
+.import-history {
+  margin-top: 32px;
+}

@@ -1,0 +1,5 @@
+categoria_id;descricao;data;valor
+1;Campanha fictícia;10/12/2026;250,50
+3;Campanha fictícia;10/12/2026;250,50
+1;Valor inválido;11/12/2026;-10,00
+3;Data inválida;31/02/2026;80,00

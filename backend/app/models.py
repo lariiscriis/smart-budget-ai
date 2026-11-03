@@ -11,7 +11,8 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
+from datetime import datetime
+from sqlalchemy import DateTime, JSON, func
 
 class Base(DeclarativeBase):
     pass
@@ -44,12 +45,32 @@ class Budget(Base):
     month: Mapped[int] = mapped_column(Integer)
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
 
+class ImportBatch(Base):
+    __tablename__ = "import_batches"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'completed')",
+            name="ck_import_batches_status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    file_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    filename: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    report: Mapped[dict] = mapped_column(JSON)
+    saved_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+    )
 
 class Expense(Base):
     __tablename__ = "expenses"
     __table_args__ = (
         CheckConstraint("amount > 0", name="ck_expenses_amount"),
     )
+    
 
     id: Mapped[int] = mapped_column(primary_key=True)
     category_id: Mapped[int] = mapped_column(
@@ -58,3 +79,9 @@ class Expense(Base):
     description: Mapped[str] = mapped_column(String(255))
     expense_date: Mapped[date] = mapped_column(Date, index=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    
+    import_id: Mapped[str | None] = mapped_column(
+        ForeignKey("import_batches.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )

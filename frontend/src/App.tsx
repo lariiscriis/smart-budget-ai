@@ -5,6 +5,7 @@ import { getFinancialSummary } from './services/api'
 import type { FinancialSummary } from './services/api'
 import './App.css'
 import FinancialEntryPanel from './components/FinancialEntryPanel'
+import ImportPanel from './components/ImportPanel'
 
 function getInitialPeriod() {
   const now = new Date()
@@ -129,6 +130,7 @@ function App() {
           )}
         </section>
       )}
+      <ImportPanel />
       <FinancialEntryPanel />
       <CategoriesPanel />
     </main>
