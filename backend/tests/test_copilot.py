@@ -125,3 +125,47 @@ def test_rejects_invalid_tool_requests(
                 month=12,
             ),
         )
+
+
+def test_mock_routes_category_question_to_comparison(monkeypatch):
+    from app.copilot_schemas import CategoryComparison
+
+    monkeypatch.setattr(copilot.settings, "ai_mode", "mock")
+    calls = []
+
+    def fake_comparison(db, year, month):
+        calls.append((year, month))
+        return CategoryComparison(
+            summary=FinancialSummary(
+                year=year,
+                month=month,
+                currency="BRL",
+                planned=Decimal("0.00"),
+                actual=Decimal("0.00"),
+                balance=Decimal("0.00"),
+                utilization_percentage=None,
+            ),
+            categories=[],
+        )
+
+    def forbidden_summary(*args, **kwargs):
+        pytest.fail("Esta pergunta deve utilizar a comparação.")
+
+    def forbidden_client(*args, **kwargs):
+        pytest.fail("O mock não pode acessar o Gemini.")
+
+    monkeypatch.setattr(copilot, "get_category_comparison", fake_comparison)
+    monkeypatch.setattr(copilot, "get_monthly_summary", forbidden_summary)
+    monkeypatch.setattr(copilot.genai, "Client", forbidden_client)
+
+    result = copilot.ask_copilot(
+        object(),
+        CopilotRequest(
+            question="Compare as categorias.",
+            year=2026,
+            month=12,
+        ),
+    )
+
+    assert calls == [(2026, 12)]
+    assert result.tools_used[0].name == "compare_categories"

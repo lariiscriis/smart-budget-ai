@@ -10,6 +10,13 @@ export type CopilotResponse = {
       month: number
     }
     result: FinancialSummary
+
+    categories?: {
+      category_id: number
+      category_name: string
+      summary: FinancialSummary
+    }[]
+    
   }[]
 }
 

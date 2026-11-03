@@ -22,11 +22,22 @@ class CopilotRequest(BaseModel):
     year: int = Field(ge=2000, le=2100)
     month: int = Field(ge=1, le=12)
 
+class CategoryBreakdown(BaseModel):
+    category_id: int
+    category_name: str
+    summary: FinancialSummary
+
+
+class CategoryComparison(BaseModel):
+    summary: FinancialSummary
+    categories: list[CategoryBreakdown]
+
 
 class ToolExecution(BaseModel):
     name: str
     arguments: SummaryArguments
     result: FinancialSummary
+    categories: list[CategoryBreakdown] = Field(default_factory=list)
 
 
 class CopilotResponse(BaseModel):

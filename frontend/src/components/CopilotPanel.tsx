@@ -61,7 +61,7 @@ export default function CopilotPanel() {
       <p className="eyebrow">ASSISTENTE FINANCEIRO</p>
       <h2 id="copilot-heading">Copiloto Smart Budget</h2>
       <p>
-        Faça perguntas sobre o resumo do período selecionado.
+        Consulte o resumo ou compare categorias do período selecionado.
         Cada consulta é independente, sem memória das perguntas anteriores.
       </p>
 
@@ -148,6 +148,49 @@ export default function CopilotPanel() {
                     </dd>
                   </div>
                 </dl>
+
+                                <p>
+                  Consulta realizada:{' '}
+                  {execution.name === 'compare_categories'
+                    ? 'Comparação por categoria'
+                    : 'Resumo geral'}
+                </p>
+
+                {execution.categories && execution.categories.length > 0 && (
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Categoria</th>
+                          <th>Previsto (R$)</th>
+                          <th>Realizado (R$)</th>
+                          <th>Saldo (R$)</th>
+                          <th>Utilização</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {execution.categories.map((category) => (
+                          <tr key={category.category_id}>
+                            <td>{category.category_name}</td>
+                            <td>{category.summary.planned.replace('.', ',')}</td>
+                            <td>{category.summary.actual.replace('.', ',')}</td>
+                            <td>{category.summary.balance.replace('.', ',')}</td>
+                            <td>
+                              {category.summary.utilization_percentage === null
+                                ? 'Não se aplica'
+                                : `${category.summary.utilization_percentage.replace('.', ',')}%`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {execution.name === 'compare_categories' &&
+                  execution.categories?.length === 0 && (
+                    <p>Não há orçamento ou despesas por categoria neste período.</p>
+                  )}
               </div>
             ))}
           </details>
