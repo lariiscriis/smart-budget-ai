@@ -7,6 +7,7 @@ import './App.css'
 import FinancialEntryPanel from './components/FinancialEntryPanel'
 import ImportPanel from './components/ImportPanel'
 import CopilotPanel from './components/CopilotPanel'
+import AutomationPanel from './components/AutomationPanel'
 
 function getInitialPeriod() {
   const now = new Date()
@@ -28,6 +29,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [year, month] = period.split('-').map(Number)
+
+
   async function loadSummary(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -38,11 +42,11 @@ function App() {
     setSummary(null)
 
     try {
-      const [year, month] = period.split('-').map(Number)
       const result = await getFinancialSummary(year, month)
       setSummary(result)
     } catch (error: unknown) {
       setError(
+
         error instanceof Error
           ? error.message
           : 'Ocorreu um erro inesperado.',
@@ -132,6 +136,11 @@ function App() {
         </section>
       )}
       <CopilotPanel />
+
+      {Number.isInteger(year) && Number.isInteger(month) && (
+        <AutomationPanel year={year} month={month} />
+      )}
+
       <ImportPanel />
       <FinancialEntryPanel />
       <CategoriesPanel />
