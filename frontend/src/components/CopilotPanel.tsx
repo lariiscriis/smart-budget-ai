@@ -61,7 +61,7 @@ export default function CopilotPanel() {
       <p className="eyebrow">ASSISTENTE FINANCEIRO</p>
       <h2 id="copilot-heading">Copiloto Smart Budget</h2>
       <p>
-        Consulte o resumo ou compare categorias do período selecionado.
+        Consulte o resumo, compare categorias ou verifique alertas do período selecionado.
         Cada consulta é independente, sem memória das perguntas anteriores.
       </p>
 
@@ -97,7 +97,7 @@ export default function CopilotPanel() {
 
       {busy && (
         <p role="status">
-          Consultando o resumo e preparando a resposta.
+          Consultando os dados e preparando a resposta.
         </p>
       )}
 
@@ -149,12 +149,60 @@ export default function CopilotPanel() {
                   </div>
                 </dl>
 
-                                <p>
+                <p>
                   Consulta realizada:{' '}
-                  {execution.name === 'compare_categories'
-                    ? 'Comparação por categoria'
-                    : 'Resumo geral'}
+                  {execution.name === 'get_financial_alerts'
+                    ? 'Alertas financeiros'
+                    : execution.name === 'compare_categories'
+                      ? 'Comparação por categoria'
+                      : 'Resumo geral'}
                 </p>
+
+                {execution.name === 'get_financial_alerts' && (
+                  <>
+                    <p>
+                      {execution.alerts.length} alerta(s) encontrado(s).
+                    </p>
+
+                    {execution.alerts.length === 0 ? (
+                      <p>
+                        Nenhuma categoria atingiu as regras atuais de alerta.
+                      </p>
+                    ) : (
+                      <div className="table-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Categoria</th>
+                              <th>Nível</th>
+                              <th>Alerta</th>
+                              <th>Previsto (R$)</th>
+                              <th>Realizado (R$)</th>
+                              <th>Saldo (R$)</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {execution.alerts.map((alert) => (
+                              <tr key={alert.category_id}>
+                                <td>{alert.category_name}</td>
+                                <td>
+                                  {alert.severity === 'critical'
+                                    ? 'Crítico'
+                                    : 'Atenção'}
+                                </td>
+                                <td>{alert.message}</td>
+                                <td>{alert.planned.replace('.', ',')}</td>
+                                <td>{alert.actual.replace('.', ',')}</td>
+                                <td>{alert.balance.replace('.', ',')}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {execution.categories && execution.categories.length > 0 && (
                   <div className="table-scroll">

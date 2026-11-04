@@ -1,5 +1,16 @@
 import type { FinancialSummary } from './api'
 
+export type CopilotAlert = {
+  category_id: number
+  category_name: string
+  code: 'unbudgeted' | 'over_budget' | 'near_limit'
+  severity: 'warning' | 'critical'
+  message: string
+  planned: string
+  actual: string
+  balance: string
+}
+
 export type CopilotResponse = {
   mode: 'mock' | 'gemini'
   answer: string
@@ -10,7 +21,7 @@ export type CopilotResponse = {
       month: number
     }
     result: FinancialSummary
-
+    alerts: CopilotAlert[]
     categories?: {
       category_id: number
       category_name: string
