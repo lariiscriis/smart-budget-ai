@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.models import Category, Expense, ImportBatch
 from app.schemas import ExpenseCreate
 from app.services.import_preview import preview_expenses
-
+from app.services.automation_jobs import enqueue_import_jobs
 
 def batch_response(batch: ImportBatch) -> dict:
     return {
@@ -146,7 +146,7 @@ def confirm_import(
                 import_id=batch.id,
             )
         )
-
+    enqueue_import_jobs(db, batch.id, payloads)
     batch.status = "completed"
     batch.saved_count = len(payloads)
 

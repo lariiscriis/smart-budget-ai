@@ -22,4 +22,9 @@ class Setting(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
     gemini_api_key: SecretStr | None = None
 
+    n8n_webhook_url: str = (
+        "http://localhost:5678/webhook/smartbudget-summary"
+    )
+
 settings = Setting()
+

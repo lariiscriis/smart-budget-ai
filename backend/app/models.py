@@ -85,3 +85,35 @@ class Expense(Base):
         nullable=True,
         index=True,
     )
+
+class AutomationJob(Base):
+    __tablename__ = "automation_jobs"
+    __table_args__ = (
+        UniqueConstraint(
+            "import_id", "year", "month",
+            name="uq_automation_jobs_import_period",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'running', 'succeeded', 'failed')",
+            name="ck_automation_jobs_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[str] = mapped_column(
+        ForeignKey("import_batches.id", ondelete="RESTRICT")
+    )
+    year: Mapped[int] = mapped_column(Integer)
+    month: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="pending",
+        index=True,
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+    )

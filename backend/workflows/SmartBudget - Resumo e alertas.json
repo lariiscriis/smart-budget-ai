@@ -1,0 +1,141 @@
+{
+  "name": "SmartBudget - Resumo e alertas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "smartbudget-summary",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "67966515-f822-491c-8dfb-a62776bcc35d",
+      "name": "Entrada",
+      "webhookId": "fb2bfbe6-2068-46dc-9635-9a74ea37ae30"
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8000/dashboard/summary",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "year",
+              "value": "={{ $('Entrada').first().json.body.year }}"
+            },
+            {
+              "name": "month",
+              "value": "={{ $('Entrada').first().json.body.month }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "1495e35e-2ac2-4650-8450-d4ba16d627e5",
+      "name": "Resumo Financeiro"
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8000/alerts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "year",
+              "value": "={{ $('Entrada').first().json.body.year }}"
+            },
+            {
+              "name": "month",
+              "value": "={{ $('Entrada').first().json.body.month }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "c40a27e9-7c5f-44da-a6d7-46f9c68aa1be",
+      "name": "Alertas Financeiros"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  summary: $('Resumo Financeiro').first().json,\n  alerts: $('Alertas Financeiros').first().json\n} }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "6eb7f59f-fa47-4f58-810c-b0c81a1a7f2e",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Entrada": {
+      "main": [
+        [
+          {
+            "node": "Resumo Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumo Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Alertas Financeiros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alertas Financeiros": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "896b4ee2-b8a5-4cba-8139-19ed17c92d97",
+  "meta": {
+    "instanceId": "df37d6788307b056fdfa155b94b2a536941ec059358e27f8415496a034b63ca0"
+  },
+  "nodeGroups": [],
+  "id": "bku0woyeAU1102qM",
+  "tags": []
+}
