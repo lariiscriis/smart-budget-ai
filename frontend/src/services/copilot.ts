@@ -1,4 +1,5 @@
 import type { FinancialSummary } from './api'
+import { authFetch, getApiBaseUrl } from './http'
 
 export type CopilotAlert = {
   category_id: number
@@ -48,13 +49,13 @@ export async function askCopilot(
   year: number,
   month: number,
 ): Promise<CopilotResponse> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
+  const baseUrl = getApiBaseUrl()
 
   if (!baseUrl) {
     throw new Error('O endereço da API não foi configurado.')
   }
 
-  const response = await fetch(`${baseUrl}/copilot/chat`, {
+  const response = await authFetch(`${baseUrl}/copilot/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question, year, month }),

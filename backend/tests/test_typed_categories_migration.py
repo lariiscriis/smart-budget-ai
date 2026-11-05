@@ -24,7 +24,7 @@ def test_revision_is_single_head_with_current_parent():
     config = Config()
     config.set_main_option("script_location", str(BACKEND / "migrations"))
     scripts = ScriptDirectory.from_config(config)
-    assert scripts.get_heads() == [migration.revision]
+    assert scripts.get_heads() == ["e6b8c2f091ad"]
     assert scripts.get_revision(migration.revision).down_revision == "5470dd519a0e"
 
 

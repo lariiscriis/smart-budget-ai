@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 
 import { createCategory, listCategories } from '../services/categories'
 import type { Category, CategoryType } from '../services/categories'
+import RecordAttribution from './RecordAttribution'
 
 const PAGE_SIZE = 20
 
@@ -131,6 +132,7 @@ export default function CategoriesPanel() {
                 <li key={category.id}>
                   <span>{category.name} · {category.type === 'income' ? 'Receita' : 'Despesa'}</span>
                   <small>ID: {category.id}</small>
+                  <RecordAttribution record={category} />
                 </li>
               ))}
             </ul>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="580" viewBox="0 0 560 580" fill="none">
+  <path d="M50 495V245a230 230 0 0 1 460 0v250Z" fill="#B7A89A"/>
+  <path d="M74 489V245a206 206 0 0 1 412 0v244" stroke="#E8DCC6"/>
+  <path d="M15 496h530M53 532h454" stroke="#722F37" stroke-width="1.2"/>
+  <path d="M83 496c31-72 61-159 77-270m-33 139-40-37m53-8 49-38m-64 94 55-28m-67 69-40-27m82-125-30-37" stroke="#514039" stroke-width="2"/>
+  <g fill="#62534B">
+    <path d="M89 329c-30-2-39-25-34-46 24 3 39 18 34 46Zm53-10c8-30 28-43 50-37-8 25-24 39-50 37Zm-14 59c6-28 26-39 51-30-7 22-25 36-51 30Zm-53 13c-26-3-39-22-37-42 24 0 39 17 37 42Zm79-126c-22-5-31-23-27-44 22 7 32 22 27 44Z"/>
+  </g>
+  <path d="M188 496V273c0-20 16-36 36-36h82c20 0 36 16 36 36v223Z" fill="#722F37" stroke="#514039" stroke-width="1.5"/>
+  <path d="M223 237v-44h85v44" fill="#514039"/>
+  <path d="M231 192v-28h68v28" fill="#722F37"/>
+  <path d="M239 164v-31h61v11h-40v20" fill="#514039"/>
+  <path d="M201 280v195" stroke="#B7A89A" stroke-width="2"/>
+  <path d="M213 307h104v116H213Z" fill="#E8DCC6"/>
+  <text x="265" y="351" text-anchor="middle" fill="#722F37" font-family="Georgia, serif" font-size="29" letter-spacing="-1.5">aurora</text>
+  <path d="M247 372h36" stroke="#722F37"/>
+  <text x="265" y="394" text-anchor="middle" fill="#514039" font-family="Arial, sans-serif" font-size="7" letter-spacing="1">COSMÉTICOS</text>
+  <text x="265" y="406" text-anchor="middle" fill="#514039" font-family="Arial, sans-serif" font-size="7" letter-spacing="1">NATURAIS</text>
+  <path d="M330 496V374c0-12 10-22 22-22h90c12 0 22 10 22 22v122Z" fill="#F5EDDF" stroke="#514039" stroke-width="1.5"/>
+  <path d="M348 352v-27h98v27" fill="#722F37" stroke="#514039" stroke-width="1.5"/>
+  <path d="M358 331v15m9-15v15m9-15v15m9-15v15m9-15v15m9-15v15m9-15v15m9-15v15m9-15v15" stroke="#B7A89A" stroke-width=".8"/>
+  <text x="397" y="416" text-anchor="middle" fill="#722F37" font-family="Georgia, serif" font-size="28" letter-spacing="-1.5">aurora</text>
+  <path d="M380 434h34" stroke="#722F37"/>
+  <text x="397" y="456" text-anchor="middle" fill="#514039" font-family="Arial, sans-serif" font-size="7" letter-spacing="1">COSMÉTICOS NATURAIS</text>
+</svg>

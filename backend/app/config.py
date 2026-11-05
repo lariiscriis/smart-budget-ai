@@ -26,6 +26,10 @@ class Setting(BaseSettings):
     n8n_webhook_url: str = (
         "http://localhost:5678/webhook/smartbudget-summary"
     )
+    auth_cookie_secure: bool = True
+    demo_registration_enabled: bool = True
+    auth_session_hours: int = Field(default=8, ge=1, le=24)
+    web_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 settings = Setting()
 

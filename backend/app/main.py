@@ -1,4 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from app.auth import get_current_user
+from app.config import settings
+from app.routers.auth import router as auth_router
+from app.routers.audit import router as audit_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.categories import router as categories_router
 from app.routers.budgets import router as budgets_router
@@ -17,30 +23,41 @@ app = FastAPI(
     version="0.1.0",
 )
 
-allowed_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+allowed_origins = settings.web_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "X-Aurora-Request"],
 )
 
 
-app.include_router(categories_router)
-app.include_router(budgets_router)
-app.include_router(expenses_router)
-app.include_router(dashboard_router)
-app.include_router(imports_router)
-app.include_router(copilot_router)
-app.include_router(alerts_router)
-app.include_router(automations_router)
-app.include_router(campaigns_router)
-app.include_router(incomes_router)
+app.include_router(auth_router)
+for financial_router in (
+    categories_router, budgets_router, expenses_router, dashboard_router,
+    imports_router, copilot_router, alerts_router, automations_router,
+    campaigns_router, incomes_router, audit_router,
+):
+    app.include_router(financial_router, dependencies=[Depends(get_current_user)])
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, error: RequestValidationError):
+    # Never echo submitted passwords or other request values in validation errors.
+    return JSONResponse(status_code=422, content={"detail": [
+        {"loc": list(item["loc"]), "type": item["type"], "msg": item["msg"]}
+        for item in error.errors()
+    ]})
+
+
+@app.middleware("http")
+async def private_responses(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @app.get("/health", tags=["Health"])

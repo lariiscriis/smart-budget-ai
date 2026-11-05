@@ -12,7 +12,7 @@ before(async () => {
     configFile: false,
     envDir: false,
     define: { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('http://api.test') },
-    server: { middlewareMode: true, watch: null },
+    server: { middlewareMode: true, watch: null, hmr: false, ws: false },
     optimizeDeps: { noDiscovery: true, include: [] },
   })
   charts = await vite.ssrLoadModule('/src/components/FinancialCharts.tsx')

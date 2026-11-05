@@ -1,3 +1,5 @@
+import { authFetch, getApiBaseUrl } from './http'
+
 type ValidRow = {
   row: number
   data: {
@@ -33,13 +35,13 @@ async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
+  const baseUrl = getApiBaseUrl()
 
   if (!baseUrl) {
     throw new Error('O endereço da API não foi configurado.')
   }
 
-  const response = await fetch(`${baseUrl}${path}`, options)
+  const response = await authFetch(`${baseUrl}${path}`, options)
   const data: unknown = await response.json()
 
   if (!response.ok) {

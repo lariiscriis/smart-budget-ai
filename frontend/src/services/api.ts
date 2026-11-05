@@ -1,3 +1,5 @@
+import { authFetch, getApiBaseUrl } from './http'
+
 export type FinancialSummary = {
   year: number
   month: number
@@ -37,7 +39,7 @@ export async function getFinancialSummary(
   year: number,
   month: number,
 ): Promise<FinancialSummary> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
+  const baseUrl = getApiBaseUrl()
 
   if (!baseUrl) {
     throw new Error('O endereço da API não foi configurado.')
@@ -48,7 +50,7 @@ export async function getFinancialSummary(
     month: String(month),
   })
 
-  const response = await fetch(
+  const response = await authFetch(
     `${baseUrl}/dashboard/summary?${params}`,
   )
 

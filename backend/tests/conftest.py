@@ -15,6 +15,7 @@ with patch.object(DotEnvSettingsSource, "_read_env_files", return_value={}), pat
         "DB_USER": "test_unused",
         "DB_PASSWORD": "test_unused",
         "AI_MODE": "mock",
+        "AUTH_COOKIE_SECURE": "false",
         "GEMINI_API_KEY": "test_unused",
     },
 ):

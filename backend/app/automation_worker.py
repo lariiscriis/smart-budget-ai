@@ -1,4 +1,7 @@
 import argparse
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from pydantic import BaseModel
@@ -7,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import engine
-from app.models import AutomationJob
+from app.models import AutomationJob, AuthSession
 from app.schemas import FinancialSummary
 from app.services.alerts import FinancialAlert
 
@@ -59,15 +62,23 @@ def process_one() -> bool:
         if job is None:
             return False
 
+        actor_id, workspace_id = job.updated_by, job.workspace_id
+        db.info.update(workspace_id=workspace_id, actor_id=actor_id, actor_kind="automation")
+
         job.status = "running"
         job.attempts += 1
 
         job_id = job.id
+        api_token = secrets.token_urlsafe(32)
+        capability_hash = hashlib.sha256(api_token.encode()).hexdigest()
+        db.add(AuthSession(token_hash=capability_hash, user_id=actor_id, workspace_id=workspace_id, job_id=job.id,
+                           expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=5)))
         payload = {
             "job_id": job.id,
             "import_id": job.import_id,
             "year": job.year,
             "month": job.month,
+            "api_token": api_token,
         }
 
         db.commit()
@@ -96,6 +107,7 @@ def process_one() -> bool:
         last_error = type(error).__name__
 
     with Session(engine) as db:
+        db.info.update(workspace_id=workspace_id, actor_id=actor_id, actor_kind="automation")
         job = db.get(AutomationJob, job_id)
 
         if job is None:
@@ -104,6 +116,9 @@ def process_one() -> bool:
         job.status = final_status
         job.result = result_data
         job.last_error = last_error
+        capability = db.get(AuthSession, capability_hash)
+        if capability is not None:
+            db.delete(capability)
         db.commit()
 
     print(f"Tarefa {job_id}: {final_status}")

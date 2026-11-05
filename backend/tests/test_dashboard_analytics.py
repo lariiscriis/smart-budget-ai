@@ -116,12 +116,12 @@ def test_analytics_are_not_truncated_by_entry_pagination(client):
     from datetime import date
 
     expense = category(client)
-    with Session(client.test_engine) as db:
+    with Session(client.test_engine, info={"workspace_id": client.test_workspace_id, "actor_id": client.test_user_id}) as db:
         db.add_all([Expense(category_id=expense, amount=Decimal('0.01'), description='Teste', expense_date=date(2026, 11, 5)) for _ in range(105)])
         db.commit()
         before = list(db.scalars(select(Campaign)).all())
     result = analytics(client)
     assert result['expense_total'] == '1.05'
     assert result['monthly'][-1]['expense_count'] == 105
-    with Session(client.test_engine) as db:
+    with Session(client.test_engine, info={"workspace_id": client.test_workspace_id, "actor_id": client.test_user_id}) as db:
         assert list(db.scalars(select(Campaign)).all()) == before

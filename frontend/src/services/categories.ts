@@ -1,13 +1,16 @@
+import { authFetch, getApiBaseUrl } from './http'
+import type { AttributedRecord } from './attribution'
+
 export type CategoryType = 'income' | 'expense'
 
-export type Category = {
+export type Category = AttributedRecord & {
   id: number
   name: string
   type: CategoryType
 }
 
 function getBaseUrl(): string {
-  const value = import.meta.env.VITE_API_BASE_URL
+  const value = getApiBaseUrl()
 
   if (!value) {
     throw new Error('O endereço da API não foi configurado.')
@@ -43,7 +46,7 @@ export async function listCategories(
   })
   if (type) params.set('type', type)
 
-  const response = await fetch(`${getBaseUrl()}/categories?${params}`)
+  const response = await authFetch(`${getBaseUrl()}/categories?${params}`)
 
   if (!response.ok) {
     throw new Error(`Falha ao consultar categorias: HTTP ${response.status}.`)
@@ -59,7 +62,7 @@ export async function listCategories(
 }
 
 export async function createCategory(name: string, type: CategoryType): Promise<Category> {
-  const response = await fetch(`${getBaseUrl()}/categories`, {
+  const response = await authFetch(`${getBaseUrl()}/categories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, type }),
@@ -84,4 +87,13 @@ export async function createCategory(name: string, type: CategoryType): Promise<
   }
 
   return data
+}
+
+export async function listAllCategories(type: CategoryType): Promise<Category[]> {
+  const all: Category[] = []
+  for (let offset = 0; ; offset += 100) {
+    const page = await listCategories(offset, 100, type)
+    all.push(...page.filter((category) => category.type === type))
+    if (page.length < 100) return all
+  }
 }

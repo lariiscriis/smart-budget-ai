@@ -1,4 +1,5 @@
 import type { FinancialSummary } from './api'
+import { authFetch, getApiBaseUrl } from './http'
 
 export type MonthlyFlow = {
   year: number; month: number; income: string; expenses: string; balance: string
@@ -47,10 +48,10 @@ function isAnalytics(v: unknown): v is DashboardAnalytics {
 export async function getDashboardAnalytics(
   year: number, month: number, months: number, signal: AbortSignal,
 ): Promise<DashboardAnalytics> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
+  const baseUrl = getApiBaseUrl()
   if (!baseUrl) throw new Error('O endereço da API não foi configurado.')
   const params = new URLSearchParams({ year: String(year), month: String(month), months: String(months) })
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/dashboard/analytics?${params}`, { signal })
+  const response = await authFetch(`${baseUrl.replace(/\/$/, '')}/dashboard/analytics?${params}`, { signal })
   if (!response.ok) throw new Error(`Não foi possível consultar o dashboard (HTTP ${response.status}). Verifique o backend e as migrações.`)
   const data: unknown = await response.json()
   if (!isAnalytics(data) || data.year !== year || data.month !== month) {

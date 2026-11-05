@@ -1,9 +1,35 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Literal
 
 CategoryType = Literal["income", "expense"]
+
+
+class AttributionUser(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: str
+
+
+class RecordMetadata(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    workspace_id: int
+    created_by: int
+    updated_by: int
+    created_by_user: AttributionUser
+    updated_by_user: AttributionUser
+    created_at: datetime
+    updated_at: datetime
+    attribution_source: str
+
+    @field_serializer("created_at", "updated_at")
+    def utc_date(self, value: datetime) -> str:
+        return value.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def record_metadata(record) -> dict:
+    return RecordMetadata.model_validate(record).model_dump(mode="json")
 
 
 class CategoryCreate(BaseModel):
@@ -16,7 +42,7 @@ class CategoryCreate(BaseModel):
     type: CategoryType = "expense"
 
 
-class CategoryRead(BaseModel):
+class CategoryRead(RecordMetadata):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -38,7 +64,7 @@ class BudgetCreate(BaseModel):
     )
 
 
-class BudgetRead(BaseModel):
+class BudgetRead(RecordMetadata):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -65,7 +91,7 @@ class ExpenseCreate(BaseModel):
     )
 
 
-class ExpenseRead(BaseModel):
+class ExpenseRead(RecordMetadata):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -82,7 +108,7 @@ class CampaignCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
-class CampaignRead(BaseModel):
+class CampaignRead(RecordMetadata):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -99,7 +125,7 @@ class IncomeCreate(BaseModel):
     amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2, allow_inf_nan=False)
 
 
-class IncomeRead(BaseModel):
+class IncomeRead(RecordMetadata):
     model_config = ConfigDict(from_attributes=True)
 
     id: int

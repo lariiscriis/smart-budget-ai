@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.models import ImportBatch
+from app.schemas import record_metadata
 from app.services.import_batches import (
     batch_response,
     confirm_import,
@@ -115,6 +116,7 @@ def list_imports(
 
     return [
         {
+            **record_metadata(batch),
             "import_id": batch.id,
             "filename": batch.filename,
             "status": batch.status,

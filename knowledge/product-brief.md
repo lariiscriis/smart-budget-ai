@@ -13,6 +13,17 @@ manualmente.
 O Aurora organiza dados financeiros, apresenta indicadores verificáveis,
 ajuda a investigar variações e automatiza resumos com base em regras definidas.
 
+## Base departamental compartilhada
+
+Os dados financeiros pertencem a um espaço de trabalho/departamento. Membros
+autenticados do mesmo espaço consultam a mesma base e os mesmos totais; criador
+e último editor são registrados separadamente, com histórico de auditoria.
+Usuários sem associação ativa não acessam os dados do espaço.
+
+Neste projeto de demonstração, novas contas entram no espaço Aurora padrão e
+compartilham apenas dados fictícios. Isso não é um mecanismo de entrada pública
+em departamentos reais, que exigem provisionamento administrativo controlado.
+
 ## Exemplos de receitas
 - Venda de produtos
 - Assinaturas mensais

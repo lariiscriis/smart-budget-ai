@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.dependencies import get_db
 from app.main import app
-from app.models import AutomationJob, Base, Expense, ImportBatch
+from app.models import AutomationJob, Base, Expense, ImportBatch, Workspace
 
 
 @pytest.fixture
@@ -18,6 +18,9 @@ def client():
         connection.execute("PRAGMA foreign_keys=ON")
 
     Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        db.add(Workspace(name="Aurora", slug="aurora-demo", is_demo=True))
+        db.commit()
 
     def test_db():
         with Session(engine) as db:
@@ -26,6 +29,12 @@ def client():
     app.dependency_overrides[get_db] = test_db
     with TestClient(app) as http:
         http.test_engine = engine
+        http.headers.update({"X-Aurora-Request": "1", "Origin": "http://localhost:5173"})
+        result = http.post("/auth/register", json={"email": "test@example.com", "password": "Senha de teste segura 2026!"})
+        assert result.status_code == 201, result.text
+        http.test_user_id = result.json()["user"]["id"]
+        http.test_workspace_id = result.json()["workspace"]["id"]
+        http.headers["X-CSRF-Token"] = result.json()["csrf_token"]
         yield http
     app.dependency_overrides.clear()
     engine.dispose()
@@ -123,7 +132,7 @@ def test_import_without_campaign_and_dashboard_are_preserved(client):
     expenses = client.get("/expenses?year=2026&month=11").json()
     assert len(expenses) == 1
     assert expenses[0]["campaign_id"] is None
-    with Session(client.test_engine) as db:
+    with Session(client.test_engine, info={"workspace_id": client.test_workspace_id, "actor_id": client.test_user_id}) as db:
         assert len(db.scalars(select(AutomationJob)).all()) == 1
     assert client.post("/incomes", json=entry(income_cat, "income", amount="99.00")).status_code == 201
     summary = client.get("/dashboard/summary?year=2026&month=11").json()
@@ -136,7 +145,7 @@ def test_import_without_campaign_and_dashboard_are_preserved(client):
 def test_pending_legacy_preview_revalidates_type_before_confirmation(client):
     cat = category(client, "income")
     # Represents an old persisted preview without the new campaign_id field.
-    with Session(client.test_engine) as db:
+    with Session(client.test_engine, info={"workspace_id": client.test_workspace_id, "actor_id": client.test_user_id}) as db:
         db.add(ImportBatch(
             id="00000000-0000-0000-0000-000000000001", file_hash="a" * 64,
             filename="legacy.csv", status="pending", saved_count=0,
@@ -146,6 +155,6 @@ def test_pending_legacy_preview_revalidates_type_before_confirmation(client):
         db.commit()
     response = client.post("/imports/00000000-0000-0000-0000-000000000001/confirm", json={})
     assert response.status_code == 409
-    with Session(client.test_engine) as db:
+    with Session(client.test_engine, info={"workspace_id": client.test_workspace_id, "actor_id": client.test_user_id}) as db:
         assert db.scalars(select(Expense)).all() == []
         assert db.scalars(select(AutomationJob)).all() == []

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.models import AutomationJob
+from app.schemas import record_metadata
 
 
 router = APIRouter(prefix="/automations", tags=["Automations"])
@@ -14,6 +15,7 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 def job_response(job: AutomationJob) -> dict:
     return {
+        **record_metadata(job),
         "id": job.id,
         "import_id": job.import_id,
         "year": job.year,

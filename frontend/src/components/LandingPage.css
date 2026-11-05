@@ -1,0 +1,48 @@
+.aurora-landing {
+  height: 100svh;
+  min-height: 600px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 0 clamp(24px, 5vw, 88px);
+  background: #E8DCC6;
+  color: #342b29;
+}
+.landing-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 24px 0; border-bottom: 1px solid #B7A89A; }
+.landing-wordmark { color: #722F37; text-decoration: none; font: 52px/0.85 Georgia, 'Times New Roman', serif; letter-spacing: -3px; }
+.landing-wordmark span { display: block; margin-top: 13px; font: 9px/1.4 'Segoe UI', Arial, sans-serif; letter-spacing: 2.2px; text-transform: uppercase; }
+.landing-access { display: inline-flex; min-height: 44px; align-items: center; gap: 24px; color: #722F37; text-underline-offset: 6px; font-size: 14px; }
+.landing-main { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: clamp(24px, 5vw, 88px); max-width: 1440px; width: 100%; margin: auto; height: 100%; min-height: 0; padding: 24px 0; }
+.landing-copy { max-width: 650px; }
+.landing-kicker { margin: 0 0 24px; color: #722F37; text-transform: uppercase; letter-spacing: 2px; font-size: 10px; font-weight: 600; }
+.landing-copy h1 { margin: 0; color: #722F37; font: clamp(40px, 4.5vw, 76px)/1.08 Georgia, 'Times New Roman', serif; letter-spacing: -1.8px; }
+.landing-copy h1 em { font-weight: 400; }
+.landing-description { max-width: 455px; margin: 24px 0 28px; font-size: 15px; line-height: 1.8; color: #514039; }
+.landing-cta { display: inline-flex; min-height: 50px; align-items: center; justify-content: space-between; gap: 44px; padding: 13px 22px; background: #722F37; color: #E8DCC6; text-decoration: none; font-size: 14px; font-weight: 600; border: 1px solid #722F37; }
+.landing-caption { color: #62534b; font-size: 11px; margin: 12px 0 0; }
+.landing-artwork { min-height: 0; height: 100%; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.landing-artwork img { display: block; width: 100%; height: auto; max-height: calc(100% - 32px); object-fit: contain; }
+.landing-artwork figcaption { margin-top: 12px; color: #62534b; text-align: center; font: italic 13px/1.5 Georgia, 'Times New Roman', serif; }
+.landing-footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; border-top: 1px solid #B7A89A; padding: 17px 0; }
+.landing-footer p { margin: 0; color: #514039; font-size: 10px; }
+.landing-footer span { margin: 0 12px; color: #722F37; }
+@media (min-width: 801px) and (max-height: 740px) {
+  .landing-header { padding: 18px 0; }
+  .landing-kicker { margin-bottom: 16px; }
+  .landing-copy h1 { font-size: clamp(40px, 4.3vw, 62px); }
+  .landing-description { margin: 18px 0 22px; }
+}
+@media (max-width: 800px) {
+  .aurora-landing { height: auto; min-height: 100svh; }
+  .landing-header { padding: 24px 0; }
+  .landing-wordmark { font-size: 44px; }
+  .landing-wordmark span { font-size: 8px; letter-spacing: 1.5px; }
+  .landing-access { gap: 10px; font-size: 12px; }
+  .landing-main { grid-template-columns: 1fr; gap: 24px; padding: 40px 0 28px; }
+  .landing-copy { max-width: 580px; }
+  .landing-copy h1 { font-size: clamp(38px, 7.7vw, 60px); letter-spacing: -1.2px; }
+  .landing-description { margin: 20px 0 24px; }
+  .landing-artwork { height: auto; }
+  .landing-artwork img { height: 250px; width: 100%; }
+  .landing-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .landing-footer span { margin: 0 6px; }
+}

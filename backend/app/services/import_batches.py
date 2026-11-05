@@ -8,12 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Category, Expense, ImportBatch
-from app.schemas import ExpenseCreate
+from app.schemas import ExpenseCreate, record_metadata
 from app.services.import_preview import preview_expenses
 from app.services.automation_jobs import enqueue_import_jobs
 
 def batch_response(batch: ImportBatch) -> dict:
     return {
+        **record_metadata(batch),
         "import_id": batch.id,
         "filename": batch.filename,
         "status": batch.status,
@@ -31,7 +32,7 @@ def register_preview(
     fingerprint = sha256(content).hexdigest()
 
     existing = db.scalar(
-        select(ImportBatch).where(ImportBatch.file_hash == fingerprint)
+        select(ImportBatch).where(ImportBatch.dedup_key == fingerprint)
     )
 
     if existing is not None:
@@ -42,6 +43,7 @@ def register_preview(
     batch = ImportBatch(
         id=str(uuid4()),
         file_hash=fingerprint,
+        dedup_key=fingerprint,
         filename=filename[:255],
         status="pending",
         report=report,
@@ -57,7 +59,7 @@ def register_preview(
         if error.orig.args and error.orig.args[0] == 1062:
             existing = db.scalar(
                 select(ImportBatch).where(
-                    ImportBatch.file_hash == fingerprint
+                    ImportBatch.dedup_key == fingerprint
                 )
             )
 
@@ -98,6 +100,12 @@ def confirm_import(
         return result
 
     report = batch.report
+
+    if batch.dedup_key is None:
+        canonical = db.scalar(select(ImportBatch).where(ImportBatch.dedup_key == batch.file_hash.lower()))
+        if canonical is not None and canonical.id != batch.id:
+            raise HTTPException(409, f"Lote legado repetido. Consulte a importação de referência {canonical.id} antes de continuar.")
+        batch.dedup_key = batch.file_hash.lower()
 
     if report["valid_count"] == 0:
         raise HTTPException(

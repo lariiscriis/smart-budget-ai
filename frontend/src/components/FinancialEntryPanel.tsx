@@ -1,44 +1,26 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 
-import { listCategories } from '../services/categories'
+import { listAllCategories } from '../services/categories'
 import type { Category } from '../services/categories'
 import { createBudget, createExpense } from '../services/entries'
+import { createIncome } from '../services/incomes'
+import { normalizeAmount, parsePeriod, todayLocal, validateDate } from '../utils/entryForm'
+import CampaignSelect from './CampaignSelect'
 
-type EntryKind = 'budget' | 'expense'
-
-function todayLocal() {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-
-  return `${now.getFullYear()}-${month}-${day}`
-}
-
-function normalizeAmount(value: string): string {
-  const normalized = value.trim().replace(',', '.')
-
-  if (!/^\d{1,12}(\.\d{1,2})?$/.test(normalized)) {
-    throw new Error(
-      'Use até 12 dígitos inteiros e duas casas decimais, sem separador de milhares. Ex.: 1500,50.',
-    )
-  }
-
-  const [integer, fraction = ''] = normalized.split('.')
-
-  return `${integer}.${fraction.padEnd(2, '0')}`
-}
+type EntryKind = 'budget' | 'expense' | 'income'
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro inesperado.'
 }
 
-export default function FinancialEntryPanel() {
+export default function FinancialEntryPanel({ onIncomeCreated }: { onIncomeCreated?: (date: string) => void }) {
   const [kind, setKind] = useState<EntryKind>('budget')
   const [categories, setCategories] = useState<Category[]>([])
   const [categoryId, setCategoryId] = useState('')
   const [period, setPeriod] = useState(() => todayLocal().slice(0, 7))
   const [expenseDate, setExpenseDate] = useState(todayLocal)
+  const [campaignId, setCampaignId] = useState('')
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [busy, setBusy] = useState(false)
@@ -53,23 +35,13 @@ export default function FinancialEntryPanel() {
     setSuccess(null)
 
     try {
-      const all: Category[] = []
-      const pageSize = 100
-      let offset = 0
-
-      while (true) {
-        const page = await listCategories(offset, pageSize, 'expense')
-        all.push(...page)
-
-        if (page.length < pageSize) break
-        offset += pageSize
-      }
+      const all = await listAllCategories(kind === 'income' ? 'income' : 'expense')
 
       setCategories(all)
       setCategoryId('')
 
       if (all.length === 0) {
-        setError('Cadastre uma categoria no painel abaixo antes de lançar valores.')
+        setError(`Cadastre uma categoria do tipo ${kind === 'income' ? 'Receita' : 'Despesa'} no painel de categorias antes de lançar valores.`)
       }
     } catch (error: unknown) {
       setError(getErrorMessage(error))
@@ -89,20 +61,15 @@ export default function FinancialEntryPanel() {
     let normalizedAmount: string
 
     try {
-      normalizedAmount = normalizeAmount(amount)
-
-      if (
-        kind === 'expense' &&
-        /^0+\.00$/.test(normalizedAmount)
-      ) {
-        throw new Error('A despesa precisa ter valor maior que zero.')
+      normalizedAmount = normalizeAmount(amount, kind !== 'budget')
+      if (kind === 'budget') parsePeriod(period)
+      else {
+        validateDate(expenseDate)
+        if (!description.trim() || description.trim().length > 255) throw new Error('Preencha uma descrição válida com até 255 caracteres.')
+        if (campaignId && (!Number.isSafeInteger(Number(campaignId)) || Number(campaignId) <= 0)) throw new Error('Selecione uma campanha válida ou mantenha sem campanha.')
       }
-
-      if (kind === 'expense' && !description.trim()) {
-        throw new Error('Preencha a descrição da despesa.')
-      }
-
-      if (!categories.some((category) => String(category.id) === categoryId)) {
+      const expectedType = kind === 'income' ? 'income' : 'expense'
+      if (!categories.some((category) => String(category.id) === categoryId && category.type === expectedType)) {
         throw new Error('Selecione uma categoria válida.')
       }
     } catch (error: unknown) {
@@ -114,7 +81,7 @@ export default function FinancialEntryPanel() {
 
     try {
       if (kind === 'budget') {
-        const [year, month] = period.split('-').map(Number)
+        const { year, month } = parsePeriod(period)
 
         await createBudget({
           category_id: Number(categoryId),
@@ -122,19 +89,27 @@ export default function FinancialEntryPanel() {
           month,
           amount: normalizedAmount,
         })
-      } else {
+      } else if (kind === 'expense') {
         await createExpense({
           category_id: Number(categoryId),
+          campaign_id: campaignId ? Number(campaignId) : null,
           description: description.trim(),
           expense_date: expenseDate,
           amount: normalizedAmount,
         })
+      } else {
+        await createIncome({
+          category_id: Number(categoryId),
+          campaign_id: campaignId ? Number(campaignId) : null,
+          description: description.trim(), income_date: expenseDate, amount: normalizedAmount,
+        })
+        onIncomeCreated?.(expenseDate)
       }
 
       setAmount('')
       setDescription('')
       setSuccess(
-        `${kind === 'budget' ? 'Orçamento' : 'Despesa'} cadastrado com sucesso. Consulte novamente o período no dashboard para atualizar os indicadores.`,
+        `${kind === 'budget' ? 'Orçamento cadastrado' : kind === 'income' ? 'Receita cadastrada' : 'Despesa cadastrada'} com sucesso. Consulte novamente o período no dashboard para atualizar os indicadores.`,
       )
     } catch (error: unknown) {
       setError(
@@ -148,7 +123,7 @@ export default function FinancialEntryPanel() {
   return (
     <section className="entry-panel" aria-labelledby="entry-heading">
       <h2 id="entry-heading">Novo lançamento</h2>
-      <p>Registre o valor previsto ou uma despesa realizada.</p>
+      <p>Registre o orçamento previsto, uma despesa ou uma receita realizada.</p>
 
       <button
         className="secondary-button"
@@ -167,7 +142,13 @@ export default function FinancialEntryPanel() {
               <select
                 value={kind}
                 onChange={(event) => {
-                  setKind(event.target.value as EntryKind)
+                  const next = event.target.value as EntryKind
+                  if ((next === 'income') !== (kind === 'income')) {
+                    setCategories([])
+                    setCategoryId('')
+                  }
+                  setKind(next)
+                  setCampaignId('')
                   setError(null)
                   setSuccess(null)
                   setAmount('')
@@ -175,6 +156,7 @@ export default function FinancialEntryPanel() {
               >
                 <option value="budget">Orçamento previsto</option>
                 <option value="expense">Despesa realizada</option>
+                <option value="income">Receita realizada</option>
               </select>
             </label>
 
@@ -209,7 +191,7 @@ export default function FinancialEntryPanel() {
             ) : (
               <>
                 <label>
-                  Data da despesa
+                  {kind === 'income' ? 'Data da receita' : 'Data da despesa'}
                   <input
                     type="date"
                     required
@@ -246,6 +228,8 @@ export default function FinancialEntryPanel() {
               />
             </label>
           </div>
+
+          {kind !== 'budget' && <div className="entry-fields"><CampaignSelect value={campaignId} onChange={setCampaignId} disabled={busy} /></div>}
 
           <button
             className="primary-button"

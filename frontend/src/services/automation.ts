@@ -1,3 +1,5 @@
+import { authFetch, getApiBaseUrl } from './http'
+
 export type FinancialAlert = {
   category_id: number
   category_name: string
@@ -29,15 +31,13 @@ export type AutomationJob = {
   created_at: string
 }
 
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000'
-).replace(/\/$/, '')
+const API_URL = getApiBaseUrl()
 
 async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, options)
+  const response = await authFetch(`${API_URL}${path}`, options)
 
   if (!response.ok) {
     if (response.status === 409) {
