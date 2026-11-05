@@ -126,14 +126,16 @@ def confirm_import(
     category_ids = {payload.category_id for payload in payloads}
     existing_ids = set(
         db.scalars(
-            select(Category.id).where(Category.id.in_(category_ids))
+            select(Category.id).where(
+                Category.id.in_(category_ids), Category.type == "expense",
+            )
         ).all()
     )
 
     if existing_ids != category_ids:
         raise HTTPException(
             status_code=409,
-            detail="Uma categoria da prévia não existe mais. Nenhuma despesa foi salva.",
+            detail="Uma categoria da prévia não existe mais ou não é do tipo 'expense'. Nenhuma despesa foi salva.",
         )
 
     for payload in payloads:

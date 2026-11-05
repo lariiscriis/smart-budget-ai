@@ -8,6 +8,8 @@ from app.routers.imports import router as imports_router
 from app.routers.copilot import router as copilot_router
 from app.routers.alerts import router as alerts_router
 from app.routers.automations import router as automations_router
+from app.routers.campaigns import router as campaigns_router
+from app.routers.incomes import router as incomes_router
 
 app = FastAPI(
     title="Smart Budget AI",
@@ -37,6 +39,8 @@ app.include_router(imports_router)
 app.include_router(copilot_router)
 app.include_router(alerts_router)
 app.include_router(automations_router)
+app.include_router(campaigns_router)
+app.include_router(incomes_router)
 
 
 @app.get("/health", tags=["Health"])

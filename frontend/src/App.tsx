@@ -1,152 +1,61 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+﻿import { useState } from 'react'
 import CategoriesPanel from './components/CategoriesPanel'
-import { getFinancialSummary } from './services/api'
-import type { FinancialSummary } from './services/api'
-import './App.css'
 import FinancialEntryPanel from './components/FinancialEntryPanel'
 import ImportPanel from './components/ImportPanel'
 import CopilotPanel from './components/CopilotPanel'
 import AutomationPanel from './components/AutomationPanel'
+import DashboardPanel from './components/DashboardPanel'
+import './App.css'
 
-function getInitialPeriod() {
+const pages = [
+  { id: 'dashboard', label: 'Visão geral', title: 'Visão financeira', description: 'Receitas, despesas e decisões com base nos seus registros.' },
+  { id: 'entries', label: 'Registros', title: 'Registros financeiros', description: 'Organize categorias e registre o orçamento e as despesas.' },
+  { id: 'imports', label: 'Importações', title: 'Importações', description: 'Revise os registros antes de incorporá-los às despesas.' },
+  { id: 'automations', label: 'Automações', title: 'Alertas e automações', description: 'Acompanhe as regras financeiras e as tarefas de processamento.' },
+  { id: 'copilot', label: 'Copiloto', title: 'Copiloto financeiro', description: 'Consulte os dados e as políticas disponíveis.' },
+] as const
+type PageId = typeof pages[number]['id']
+
+function initialPeriod() {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
-function formatMoney(value: string) {
-  const negative = value.startsWith('-')
-  const unsigned = negative ? value.slice(1) : value
-  const [integer, fraction = ''] = unsigned.split('.')
-  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-
-  return `${negative ? '-' : ''}R$ ${grouped},${fraction.padEnd(2, '0')}`
-}
-
 function App() {
-  const [period, setPeriod] = useState(getInitialPeriod)
-  const [summary, setSummary] = useState<FinancialSummary | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
+  const [active, setActive] = useState<PageId>('dashboard')
+  const [visited, setVisited] = useState<PageId[]>(['dashboard'])
+  const [period, setPeriod] = useState(initialPeriod)
+  const page = pages.find((item) => item.id === active)!
   const [year, month] = period.split('-').map(Number)
 
-
-  async function loadSummary(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
-    if (isLoading) return
-
-    setIsLoading(true)
-    setError(null)
-    setSummary(null)
-
-    try {
-      const result = await getFinancialSummary(year, month)
-      setSummary(result)
-    } catch (error: unknown) {
-      setError(
-
-        error instanceof Error
-          ? error.message
-          : 'Ocorreu um erro inesperado.',
-      )
-    } finally {
-      setIsLoading(false)
-    }
+  function navigate(id: PageId) {
+    setActive(id)
+    setVisited((current) => current.includes(id) ? current : [...current, id])
   }
 
-  return (
-    <main className="dashboard">
-      <header>
-        <p className="eyebrow">SMART BUDGET AI</p>
-        <h1>Visão financeira</h1>
-        <p>Consulte o orçamento e as despesas do período.</p>
-      </header>
-
-      <form className="period-form" onSubmit={loadSummary}>
-        <div>
-          <label htmlFor="period">Mês de referência</label>
-          <input
-            id="period"
-            type="month"
-            min="2000-01"
-            max="2100-12"
-            required
-            value={period}
-            onChange={(event) => setPeriod(event.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Consultando...' : 'Consultar período'}
-        </button>
-      </form>
-
-      {isLoading && <p role="status">Carregando indicadores...</p>}
-
-      {error && (
-        <p className="error-message" role="alert">
-          {error} Confira se o backend está disponível e tente novamente.
-        </p>
-      )}
-
-      {!summary && !isLoading && !error && (
-        <p role="status">Selecione um período e clique em consultar.</p>
-      )}
-
-      {summary && (
-        <section aria-labelledby="summary-heading">
-          <h2 id="summary-heading">
-            Resumo de {String(summary.month).padStart(2, '0')}/{summary.year}
-          </h2>
-
-          <div className="metrics">
-            <article className="metric">
-              <h3>Previsto</h3>
-              <p>{formatMoney(summary.planned)}</p>
-            </article>
-
-            <article className="metric">
-              <h3>Realizado</h3>
-              <p>{formatMoney(summary.actual)}</p>
-            </article>
-
-            <article className="metric">
-              <h3>Saldo</h3>
-              <p className={summary.balance.startsWith('-') ? 'negative' : ''}>
-                {formatMoney(summary.balance)}
-              </p>
-            </article>
-
-            <article className="metric">
-              <h3>Utilização</h3>
-              <p>
-                {summary.utilization_percentage === null
-                  ? 'Não se aplica'
-                  : `${summary.utilization_percentage.replace('.', ',')}%`}
-              </p>
-            </article>
-          </div>
-
-          {summary.utilization_percentage === null && (
-            <p>Não há valor previsto positivo para calcular a utilização.</p>
-          )}
-        </section>
-      )}
-      <CopilotPanel />
-
-      {Number.isInteger(year) && Number.isInteger(month) && (
-        <AutomationPanel year={year} month={month} />
-      )}
-
-      <ImportPanel />
-      <FinancialEntryPanel />
-      <CategoriesPanel />
+  return <>
+    <header className="topbar">
+      <a className="brand" href="#dashboard" onClick={(event) => { event.preventDefault(); navigate('dashboard') }} aria-label="Aurora, visão geral">aurora<span>gestão financeira</span></a>
+      <nav aria-label="Navegação principal">
+        {pages.map((item) => <button key={item.id} type="button" aria-current={active === item.id ? 'page' : undefined} onClick={() => navigate(item.id)}>{item.label}</button>)}
+      </nav>
+    </header>
+    <main className="dashboard" id="dashboard">
+      <div className="page-heading">
+        <div><p className="eyebrow">Aurora / {page.label}</p><h1>{page.title}</h1><p>{page.description}</p></div>
+        {(active === 'dashboard' || active === 'automations') && <label className="period-control" htmlFor="period">Mês de referência
+          <input id="period" type="month" required min="2000-01" max="2100-12" value={period}
+            onChange={(event) => { if (/^(20\d{2}|2100)-(0[1-9]|1[0-2])$/.test(event.target.value)) setPeriod(event.target.value) }} />
+        </label>}
+      </div>
+      {active === 'dashboard' && <DashboardPanel period={period} />}
+      {visited.includes('entries') && <div hidden={active !== 'entries'}><FinancialEntryPanel /><CategoriesPanel /></div>}
+      {visited.includes('imports') && <div hidden={active !== 'imports'}><ImportPanel /></div>}
+      {visited.includes('automations') && <div hidden={active !== 'automations'}><AutomationPanel year={year} month={month} /></div>}
+      {visited.includes('copilot') && <div hidden={active !== 'copilot'}><CopilotPanel /></div>}
+      <footer className="page-footer"><span>Aurora</span><p>Controle financeiro · Cosméticos naturais</p></footer>
     </main>
-  )
+  </>
 }
-
 
 export default App

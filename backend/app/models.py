@@ -20,9 +20,36 @@ class Base(DeclarativeBase):
 
 class Category(Base):
     __tablename__ = "categories"
+    __table_args__ = (
+        UniqueConstraint("name", "type", name="uq_categories_name_type"),
+        CheckConstraint("type IN ('income', 'expense')", name="ck_categories_type"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
+    name: Mapped[str] = mapped_column(String(100))
+    type: Mapped[str] = mapped_column(String(7), default="expense", server_default="expense")
+
+
+class Campaign(Base):
+    __tablename__ = "campaigns"
+    __table_args__ = (UniqueConstraint("name", name="uq_campaigns_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+
+
+class Income(Base):
+    __tablename__ = "incomes"
+    __table_args__ = (CheckConstraint("amount > 0", name="ck_incomes_amount"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="RESTRICT"))
+    campaign_id: Mapped[int | None] = mapped_column(
+        ForeignKey("campaigns.id", ondelete="RESTRICT"), nullable=True, index=True,
+    )
+    description: Mapped[str] = mapped_column(String(255))
+    income_date: Mapped[date] = mapped_column(Date, index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
 
 
 class Budget(Base):
@@ -73,6 +100,11 @@ class Expense(Base):
     
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    campaign_id: Mapped[int | None] = mapped_column(
+        ForeignKey("campaigns.id", ondelete="RESTRICT", name="fk_expenses_campaign_id"),
+        nullable=True,
+        index=True,
+    )
     category_id: Mapped[int] = mapped_column(
         ForeignKey("categories.id", ondelete="RESTRICT")
     )

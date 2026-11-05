@@ -1,6 +1,9 @@
+export type CategoryType = 'income' | 'expense'
+
 export type Category = {
   id: number
   name: string
+  type: CategoryType
 }
 
 function getBaseUrl(): string {
@@ -24,18 +27,21 @@ function isCategory(value: unknown): value is Category {
     typeof data.id === 'number' &&
     Number.isInteger(data.id) &&
     data.id > 0 &&
-    typeof data.name === 'string'
+    typeof data.name === 'string' &&
+    (data.type === 'income' || data.type === 'expense')
   )
 }
 
 export async function listCategories(
   offset = 0,
   limit = 20,
+  type?: CategoryType,
 ): Promise<Category[]> {
   const params = new URLSearchParams({
     offset: String(offset),
     limit: String(limit),
   })
+  if (type) params.set('type', type)
 
   const response = await fetch(`${getBaseUrl()}/categories?${params}`)
 
@@ -52,15 +58,15 @@ export async function listCategories(
   return data
 }
 
-export async function createCategory(name: string): Promise<Category> {
+export async function createCategory(name: string, type: CategoryType): Promise<Category> {
   const response = await fetch(`${getBaseUrl()}/categories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, type }),
   })
 
   if (response.status === 409) {
-    throw new Error('Já existe uma categoria com esse nome.')
+    throw new Error('Já existe uma categoria com esse nome e tipo.')
   }
 
   if (response.status === 422) {

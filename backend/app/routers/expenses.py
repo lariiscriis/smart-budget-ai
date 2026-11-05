@@ -7,8 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
-from app.models import Category, Expense
+from app.models import Expense
 from app.schemas import ExpenseCreate, ExpenseRead
+from app.services.entry_validation import require_category, require_campaign
 
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -22,14 +23,12 @@ DbSession = Annotated[Session, Depends(get_db)]
     status_code=status.HTTP_201_CREATED,
 )
 def create_expense(payload: ExpenseCreate, db: DbSession):
-    if db.get(Category, payload.category_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Categoria não encontrada.",
-        )
+    require_category(db, payload.category_id, "expense")
+    require_campaign(db, payload.campaign_id)
 
     expense = Expense(
         category_id=payload.category_id,
+        campaign_id=payload.campaign_id,
         description=payload.description,
         expense_date=payload.expense_date,
         amount=payload.amount,
@@ -44,7 +43,7 @@ def create_expense(payload: ExpenseCreate, db: DbSession):
         if error.orig.args and error.orig.args[0] == 1452:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="A categoria deixou de estar disponível. Consulte novamente.",
+                detail="A categoria ou campanha deixou de estar disponível. Consulte novamente.",
             ) from None
 
         raise
@@ -59,6 +58,7 @@ def list_expenses(
     year: Annotated[int, Query(ge=2000, le=2100)],
     month: Annotated[int, Query(ge=1, le=12)],
     category_id: Annotated[int | None, Query(gt=0)] = None,
+    campaign_id: Annotated[int | None, Query(gt=0)] = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ):
@@ -76,6 +76,8 @@ def list_expenses(
 
     if category_id is not None:
         statement = statement.where(Expense.category_id == category_id)
+    if campaign_id is not None:
+        statement = statement.where(Expense.campaign_id == campaign_id)
 
     statement = (
         statement

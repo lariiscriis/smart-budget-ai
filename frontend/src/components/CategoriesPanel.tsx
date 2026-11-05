@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { createCategory, listCategories } from '../services/categories'
-import type { Category } from '../services/categories'
+import type { Category, CategoryType } from '../services/categories'
 
 const PAGE_SIZE = 20
 
@@ -12,6 +12,7 @@ function errorMessage(error: unknown): string {
 
 export default function CategoriesPanel() {
   const [name, setName] = useState('')
+  const [type, setType] = useState<CategoryType>('expense')
   const [categories, setCategories] = useState<Category[]>([])
   const [offset, setOffset] = useState(0)
   const [hasLoaded, setHasLoaded] = useState(false)
@@ -56,7 +57,7 @@ export default function CategoriesPanel() {
     setSuccess(null)
 
     try {
-      const created = await createCategory(cleanedName)
+      const created = await createCategory(cleanedName, type)
 
       setName('')
       setSuccess(`Categoria "${created.name}" cadastrada. Atualize a lista para consultar.`)
@@ -89,6 +90,17 @@ export default function CategoriesPanel() {
           />
         </div>
 
+        <label htmlFor="category-type">Tipo</label>
+        <select
+          id="category-type"
+          value={type}
+          disabled={busy}
+          onChange={(event) => setType(event.target.value as CategoryType)}
+        >
+          <option value="expense">Despesa</option>
+          <option value="income">Receita</option>
+        </select>
+
         <button type="submit" disabled={busy}>
           Cadastrar categoria
         </button>
@@ -117,7 +129,7 @@ export default function CategoriesPanel() {
             <ul className="category-list">
               {categories.map((category) => (
                 <li key={category.id}>
-                  <span>{category.name}</span>
+                  <span>{category.name} · {category.type === 'income' ? 'Receita' : 'Despesa'}</span>
                   <small>ID: {category.id}</small>
                 </li>
               ))}

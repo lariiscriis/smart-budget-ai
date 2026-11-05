@@ -110,12 +110,13 @@ def preview_expenses(frame: pd.DataFrame, db: Session) -> dict:
             )
 
             if expense.category_id not in category_exists:
+                category = db.get(Category, expense.category_id)
                 category_exists[expense.category_id] = (
-                    db.get(Category, expense.category_id) is not None
+                    category is not None and category.type == "expense"
                 )
 
             if not category_exists[expense.category_id]:
-                raise ValueError("Categoria não encontrada.")
+                raise ValueError("Categoria de despesa não encontrada (tipo 'expense').")
 
             key = (
                 expense.category_id,

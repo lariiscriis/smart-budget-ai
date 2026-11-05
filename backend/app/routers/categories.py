@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.models import Category
-from app.schemas import CategoryCreate, CategoryRead
+from app.schemas import CategoryCreate, CategoryRead, CategoryType
+from app.services.entry_validation import is_duplicate
 
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
@@ -21,7 +22,7 @@ DbSession = Annotated[Session, Depends(get_db)]
     status_code=status.HTTP_201_CREATED,
 )
 def create_category(payload: CategoryCreate, db: DbSession):
-    category = Category(name=payload.name)
+    category = Category(name=payload.name, type=payload.type)
     db.add(category)
 
     try:
@@ -29,10 +30,10 @@ def create_category(payload: CategoryCreate, db: DbSession):
     except IntegrityError as error:
         db.rollback()
 
-        if error.orig.args and error.orig.args[0] == 1062:
+        if is_duplicate(error):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Já existe uma categoria com esse nome.",
+                detail="Já existe uma categoria com esse nome e tipo.",
             ) from None
 
         raise
@@ -44,6 +45,7 @@ def create_category(payload: CategoryCreate, db: DbSession):
 @router.get("", response_model=list[CategoryRead])
 def list_categories(
     db: DbSession,
+    type: Annotated[CategoryType | None, Query()] = None,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ):
@@ -54,4 +56,6 @@ def list_categories(
         .limit(limit)
     )
 
+    if type is not None:
+        statement = statement.where(Category.type == type)
     return db.scalars(statement).all()

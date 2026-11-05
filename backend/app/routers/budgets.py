@@ -6,8 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
-from app.models import Budget, Category
+from app.models import Budget
 from app.schemas import BudgetCreate, BudgetRead
+from app.services.entry_validation import require_category
 
 
 router = APIRouter(prefix="/budgets", tags=["Budgets"])
@@ -21,13 +22,7 @@ DbSession = Annotated[Session, Depends(get_db)]
     status_code=status.HTTP_201_CREATED,
 )
 def create_budget(payload: BudgetCreate, db: DbSession):
-    category = db.get(Category, payload.category_id)
-
-    if category is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Categoria não encontrada.",
-        )
+    require_category(db, payload.category_id, "expense")
 
     budget = Budget(
         category_id=payload.category_id,

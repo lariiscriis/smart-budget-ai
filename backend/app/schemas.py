@@ -1,6 +1,9 @@
 from pydantic import BaseModel, ConfigDict, Field
 from decimal import Decimal
 from datetime import date
+from typing import Literal
+
+CategoryType = Literal["income", "expense"]
 
 
 class CategoryCreate(BaseModel):
@@ -10,6 +13,7 @@ class CategoryCreate(BaseModel):
     )
 
     name: str = Field(min_length=1, max_length=100)
+    type: CategoryType = "expense"
 
 
 class CategoryRead(BaseModel):
@@ -17,6 +21,7 @@ class CategoryRead(BaseModel):
 
     id: int
     name: str
+    type: CategoryType
 
 
 class BudgetCreate(BaseModel):
@@ -49,6 +54,7 @@ class ExpenseCreate(BaseModel):
     )
 
     category_id: int = Field(gt=0)
+    campaign_id: int | None = Field(default=None, gt=0)
     description: str = Field(min_length=1, max_length=255)
     expense_date: date
     amount: Decimal = Field(
@@ -64,8 +70,43 @@ class ExpenseRead(BaseModel):
 
     id: int
     category_id: int
+    campaign_id: int | None = None
     description: str
     expense_date: date
+    amount: Decimal
+
+
+class CampaignCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    name: str = Field(min_length=1, max_length=100)
+
+
+class CampaignRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
+class IncomeCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    category_id: int = Field(gt=0)
+    campaign_id: int | None = Field(default=None, gt=0)
+    description: str = Field(min_length=1, max_length=255)
+    income_date: date
+    amount: Decimal = Field(gt=0, max_digits=14, decimal_places=2, allow_inf_nan=False)
+
+
+class IncomeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    category_id: int
+    campaign_id: int | None
+    description: str
+    income_date: date
     amount: Decimal
 
 

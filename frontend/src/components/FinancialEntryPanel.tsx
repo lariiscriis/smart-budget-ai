@@ -58,7 +58,7 @@ export default function FinancialEntryPanel() {
       let offset = 0
 
       while (true) {
-        const page = await listCategories(offset, pageSize)
+        const page = await listCategories(offset, pageSize, 'expense')
         all.push(...page)
 
         if (page.length < pageSize) break
