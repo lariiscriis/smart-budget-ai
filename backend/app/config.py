@@ -21,7 +21,8 @@ class Setting(BaseSettings):
     ai_mode: Literal["mock", "gemini"] = "mock"
     gemini_model: str = "gemini-3.5-flash-lite"
     gemini_api_key: SecretStr | None = None
-
+    gemini_embedding_model: str = "gemini-embedding-001"
+    
     n8n_webhook_url: str = (
         "http://localhost:5678/webhook/smartbudget-summary"
     )

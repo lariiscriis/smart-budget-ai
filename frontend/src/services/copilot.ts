@@ -11,6 +11,16 @@ export type CopilotAlert = {
   balance: string
 }
 
+export type PolicySource = {
+  source_id: string
+  document_id: string
+  version: string
+  section_id: string
+  section_title: string
+  text: string
+  similarity: number
+}
+
 export type CopilotResponse = {
   mode: 'mock' | 'gemini'
   answer: string
@@ -20,7 +30,9 @@ export type CopilotResponse = {
       year: number
       month: number
     }
-    result: FinancialSummary
+    result: FinancialSummary | null
+    sources: PolicySource[]
+    cited_source_ids: string[]
     alerts: CopilotAlert[]
     categories?: {
       category_id: number

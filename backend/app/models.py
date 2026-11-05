@@ -117,3 +117,19 @@ class AutomationJob(Base):
         DateTime,
         server_default=func.now(),
     )
+
+class PolicyEmbedding(Base):
+    __tablename__ = "policy_embeddings"
+
+    cache_key: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+    )
+    chunk_id: Mapped[str] = mapped_column(String(64))
+    model_name: Mapped[str] = mapped_column(String(150))
+    dimensions: Mapped[int] = mapped_column(Integer)
+    vector: Mapped[list[float]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+    )

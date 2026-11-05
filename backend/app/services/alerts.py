@@ -3,18 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from app.copilot_schemas import CategoryComparison
+from app.copilot_schemas import CategoryComparison, FinancialAlert
 
-
-class FinancialAlert(BaseModel):
-    category_id: int
-    category_name: str
-    code: Literal["unbudgeted", "over_budget", "near_limit"]
-    severity: Literal["warning", "critical"]
-    message: str
-    planned: Decimal
-    actual: Decimal
-    balance: Decimal
 
 
 def build_alerts(comparison: CategoryComparison) -> list[FinancialAlert]:

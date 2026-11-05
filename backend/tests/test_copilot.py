@@ -169,3 +169,83 @@ def test_mock_routes_category_question_to_comparison(monkeypatch):
 
     assert calls == [(2026, 12)]
     assert result.tools_used[0].name == "compare_categories"
+
+@pytest.mark.parametrize(
+    "actual, expected_code",
+    [
+        ("79.99", None),
+        ("100.01", "over_budget"),
+    ],
+)
+def test_mock_returns_financial_alerts(
+    monkeypatch,
+    actual,
+    expected_code,
+):
+    from app.services.category_comparison import build_comparison
+
+    monkeypatch.setattr(copilot.settings, "ai_mode", "mock")
+    calls = []
+
+    def fake_comparison(db, year, month):
+        calls.append((year, month))
+
+        return build_comparison(
+            year=year,
+            month=month,
+            names=[(1, "Tecnologia")],
+            planned={1: Decimal("100.00")},
+            actual={1: Decimal(actual)},
+        )
+
+    def forbidden_summary(*args, **kwargs):
+        pytest.fail("A consulta deve utilizar a comparação para gerar alertas.")
+
+    def forbidden_client(*args, **kwargs):
+        pytest.fail("O mock não pode acessar o Gemini.")
+
+    monkeypatch.setattr(
+        copilot,
+        "get_category_comparison",
+        fake_comparison,
+    )
+    monkeypatch.setattr(
+        copilot,
+        "get_monthly_summary",
+        forbidden_summary,
+    )
+    monkeypatch.setattr(copilot.genai, "Client", forbidden_client)
+
+    result = copilot.ask_copilot(
+        object(),
+        CopilotRequest(
+            question="Quais categorias precisam de atenção?",
+            year=2026,
+            month=12,
+        ),
+    )
+
+    assert calls == [(2026, 12)]
+    assert result.mode == "mock"
+    assert len(result.tools_used) == 1
+
+    execution = result.tools_used[0]
+
+    assert execution.name == "get_financial_alerts"
+    assert execution.result.actual == Decimal(actual)
+
+    if expected_code is None:
+        assert execution.alerts == []
+        assert "Nenhuma categoria" in result.answer
+    else:
+        assert len(execution.alerts) == 1
+        assert execution.alerts[0].code == expected_code
+        assert execution.alerts[0].category_name == "Tecnologia"
+        assert execution.alerts[0].balance == Decimal("-0.01")
+        assert "Tecnologia" in result.answer
+
+        serialized = result.model_dump(mode="json")
+        alert = serialized["tools_used"][0]["alerts"][0]
+
+        assert alert["code"] == expected_code
+        assert alert["actual"] == "100.01"

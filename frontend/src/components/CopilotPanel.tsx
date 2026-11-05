@@ -61,10 +61,10 @@ export default function CopilotPanel() {
       <p className="eyebrow">ASSISTENTE FINANCEIRO</p>
       <h2 id="copilot-heading">Copiloto Smart Budget</h2>
       <p>
-        Consulte o resumo, compare categorias ou verifique alertas do período selecionado.
+        Consulte dados financeiros do período selecionado ou pesquise
+        as políticas fictícias disponíveis.
         Cada consulta é independente, sem memória das perguntas anteriores.
       </p>
-
       <form className="copilot-form" onSubmit={handleSubmit}>
         <label htmlFor="copilot-period">Período da consulta</label>
         <input
@@ -120,12 +120,22 @@ export default function CopilotPanel() {
 
             {answer.response.tools_used.map((execution, index) => (
               <div key={`${execution.name}-${index}`}>
-                <p>
-                  Fonte: resumo financeiro do Smart Budget AI,
-                  {' '}{String(execution.arguments.month).padStart(2, '0')}
-                  /{execution.arguments.year}.
-                </p>
 
+              <p>
+                {execution.name === 'search_financial_policies'
+                  ? 'Fonte: políticas fictícias carregadas. A seleção por vigência ainda não é aplicada.'
+                  : `Fonte: dados financeiros de ${String(execution.arguments.month).padStart(2, '0')}/${execution.arguments.year}.`}
+              </p>
+
+              {execution.name === 'review_budget_policy' && (
+                <p>
+                  Esta análise também utiliza políticas fictícias.
+                  A vigência dos documentos para o período selecionado
+                  ainda não é verificada.
+                </p>
+              )}
+
+              {execution.result && (
                 <dl className="source-data">
                   <div>
                     <dt>Previsto (BRL)</dt>
@@ -148,17 +158,68 @@ export default function CopilotPanel() {
                     </dd>
                   </div>
                 </dl>
+                  )}
+
 
                 <p>
                   Consulta realizada:{' '}
-                  {execution.name === 'get_financial_alerts'
-                    ? 'Alertas financeiros'
-                    : execution.name === 'compare_categories'
-                      ? 'Comparação por categoria'
-                      : 'Resumo geral'}
+                  {execution.name === 'review_budget_policy'
+                    ? 'Análise financeira com políticas'
+                    : execution.name === 'search_financial_policies'
+                      ? 'Busca de políticas'
+                      : execution.name === 'get_financial_alerts'
+                        ? 'Alertas financeiros'
+                        : execution.name === 'compare_categories'
+                          ? 'Comparação por categoria'
+                          : 'Resumo geral'}
                 </p>
 
-                {execution.name === 'get_financial_alerts' && (
+                {(
+                  execution.name === 'search_financial_policies' ||
+                  execution.name === 'review_budget_policy'
+                ) && (
+                  
+                  <div>
+                    <h4>Trechos recuperados</h4>
+
+                    <p>
+                      Os candidatos abaixo foram encontrados pela busca.
+                      As fontes citadas estão identificadas.
+                    </p>
+
+                    {execution.sources.map((source) => (
+                      <details key={source.source_id}>
+                        <summary>
+                          [{source.source_id}] {source.document_id}
+                          {' '}— {source.section_id}
+                          {execution.cited_source_ids.includes(source.source_id)
+                            ? ' — Citada na resposta'
+                            : ' — Candidata recuperada'}
+                        </summary>
+
+                        <p>
+                          Versão {source.version}
+                          {' '}— {source.section_title}
+                        </p>
+
+                        <p style={{ whiteSpace: 'pre-wrap' }}>
+                          {source.text}
+                        </p>
+
+                        <p>
+                          Similaridade: {source.similarity.toFixed(4)}.
+                          Esse valor não representa uma probabilidade de acerto.
+                        </p>
+                      </details>
+                    ))}
+                  </div>
+                )}
+                
+
+                {(
+                  execution.name === 'get_financial_alerts' ||
+                  execution.name === 'review_budget_policy'
+                ) && (
                   <>
                     <p>
                       {execution.alerts.length} alerta(s) encontrado(s).

@@ -10,6 +10,7 @@ from app.copilot_schemas import CopilotRequest, CopilotResponse
 from app.dependencies import get_db
 from app.services.copilot import ask_copilot
 
+from pydantic import ValidationError
 
 router = APIRouter(prefix="/copilot", tags=["Copilot"])
 logger = logging.getLogger(__name__)
@@ -21,7 +22,23 @@ DbSession = Annotated[Session, Depends(get_db)]
 def chat(payload: CopilotRequest, db: DbSession):
     try:
         return ask_copilot(db, payload)
+    
+    except ValidationError as error:
+        details = [
+            {
+                "location": list(item["loc"]),
+                "type": item["type"],
+            }
+            for item in error.errors()
+        ]
 
+        print("Detalhes da validação do copiloto:", details)
+
+        raise HTTPException(
+            status_code=503,
+            detail="Resposta inválida no copiloto. Confira o terminal do backend.",
+        ) from error
+    
     except errors.APIError as error:
         from app.config import settings
 
