@@ -63,13 +63,23 @@ def get_current_user(request: Request, db: Annotated[Session, Depends(get_db)]) 
     workspace = db.get(Workspace, session.workspace_id)
     if membership is None or not membership.active or workspace is None:
         raise HTTPException(401, "Seu acesso ao espaço de trabalho não está ativo. Entre novamente.")
+    # Identity and membership are verified. Apply their trusted workspace before
+    # loading AutomationJob, which is itself protected by the financial read guard.
+    db.info.update(workspace_id=workspace.id, actor_id=user.id)
     if bearer:
         job = db.get(AutomationJob, session.job_id) if session.job_id else None
+        analysis_path = f"/automations/{session.job_id}/analysis"
         if (job is None or job.workspace_id != session.workspace_id or job.status != "running"
-            or request.method != "GET" or request.url.path not in {"/dashboard/summary", "/alerts"}
+            or request.method != "GET" or request.url.path not in {"/dashboard/summary", "/alerts", analysis_path}
             or request.query_params.get("year") != str(job.year)
             or request.query_params.get("month") != str(job.month)):
             raise HTTPException(403, "Credencial restrita à leitura do período desta tarefa.")
+        if request.url.path == analysis_path and (
+            request.query_params.get("workspace_id") != str(job.workspace_id)
+            or request.query_params.get("import_id") != job.import_id
+            or request.query_params.get("attempt") != str(job.attempts)
+        ):
+            raise HTTPException(403, "Contexto de automação incompatível com a tarefa.")
     elif session.job_id is not None:
         raise HTTPException(401, "Sessão inválida.")
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
@@ -77,7 +87,9 @@ def get_current_user(request: Request, db: Annotated[Session, Depends(get_db)]) 
         supplied = request.headers.get("x-csrf-token", "")
         if not hmac.compare_digest(supplied.encode("utf-8"), csrf_token(token).encode("ascii")):
             raise HTTPException(403, "Proteção CSRF inválida. Atualize a sessão.")
-    db.info.update(workspace_id=workspace.id, actor_id=user.id)
+    if bearer:
+        db.info.update(actor_kind="automation", automation_job_id=job.id,
+                       automation_attempt=job.attempts)
     request.state.workspace = workspace
     request.state.auth_session = session
     return user

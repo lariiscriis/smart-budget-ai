@@ -241,6 +241,16 @@ def test_worker_forwards_only_job_capability_and_revokes_it(client, monkeypatch)
     client.post(f"/imports/{batch['import_id']}/confirm", json={})
     api = TestClient(app)
     tokens = []
+    from app.services import automation_summary, copilot
+    from pydantic import SecretStr
+    monkeypatch.setattr(automation_summary.settings, "ai_mode", "gemini")
+    monkeypatch.setattr(automation_summary.settings, "gemini_api_key", SecretStr("fake-key"))
+    class RagClient:
+        def __init__(self, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+    monkeypatch.setattr(automation_summary.genai, "Client", RagClient)
+    monkeypatch.setattr(copilot, "search_analysis_policies", lambda *args: [])
 
     class WorkflowClient:
         def __init__(self, **kwargs): pass
@@ -250,11 +260,10 @@ def test_worker_forwards_only_job_capability_and_revokes_it(client, monkeypatch)
             token = json["api_token"]
             tokens.append(token)
             api.headers["Authorization"] = f"Bearer {token}"
-            params = {"year": json["year"], "month": json["month"]}
-            summary = api.get("/dashboard/summary", params=params)
-            alerts = api.get("/alerts", params=params)
-            assert summary.status_code == alerts.status_code == 200
-            return SimpleNamespace(raise_for_status=lambda: None, json=lambda: {"summary": summary.json(), "alerts": alerts.json()})
+            params = {key: json[key] for key in ("year", "month", "workspace_id", "import_id", "attempt")}
+            analysis = api.get(f"/automations/{json['job_id']}/analysis", params=params)
+            assert analysis.status_code == 200, analysis.text
+            return SimpleNamespace(raise_for_status=lambda: None, json=lambda: analysis.json())
 
     monkeypatch.setattr(automation_worker, "engine", client.test_engine)
     monkeypatch.setattr(automation_worker.httpx, "Client", WorkflowClient)

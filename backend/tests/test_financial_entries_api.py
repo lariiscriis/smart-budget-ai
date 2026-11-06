@@ -23,7 +23,8 @@ def client():
         db.commit()
 
     def test_db():
-        with Session(engine) as db:
+        # Match get_db in production: financial reads require authenticated scope.
+        with Session(engine, info={"http_request": True}) as db:
             yield db
 
     app.dependency_overrides[get_db] = test_db

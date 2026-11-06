@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:8000/dashboard/summary",
+        "url": "={{ 'http://127.0.0.1:8000/automations/' + $('Entrada').first().json.body.job_id + '/analysis' }}",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -31,6 +31,18 @@
             {
               "name": "month",
               "value": "={{ $('Entrada').first().json.body.month }}"
+            },
+            {
+              "name": "workspace_id",
+              "value": "={{ $('Entrada').first().json.body.workspace_id }}"
+            },
+            {
+              "name": "import_id",
+              "value": "={{ $('Entrada').first().json.body.import_id }}"
+            },
+            {
+              "name": "attempt",
+              "value": "={{ $('Entrada').first().json.body.attempt }}"
             }
           ]
         },
@@ -43,7 +55,14 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "timeout": 100000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
@@ -56,44 +75,8 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:8000/alerts",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "year",
-              "value": "={{ $('Entrada').first().json.body.year }}"
-            },
-            {
-              "name": "month",
-              "value": "={{ $('Entrada').first().json.body.month }}"
-            }
-          ]
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $('Entrada').first().json.body.api_token }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.5,
-      "position": [
-        448,
-        0
-      ],
-      "id": "c40a27e9-7c5f-44da-a6d7-46f9c68aa1be",
-      "name": "Alertas Financeiros"
-    },
-    {
-      "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ {\n  summary: $('Resumo Financeiro').first().json,\n  alerts: $('Alertas Financeiros').first().json\n} }}",
+        "responseBody": "={{ $('Resumo Financeiro').first().json }}",
         "options": {
           "responseCode": 200
         }
@@ -101,7 +84,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        672,
+        448,
         0
       ],
       "id": "6eb7f59f-fa47-4f58-810c-b0c81a1a7f2e",
@@ -125,17 +108,6 @@
       "main": [
         [
           {
-            "node": "Alertas Financeiros",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Alertas Financeiros": {
-      "main": [
-        [
-          {
             "node": "Respond to Webhook",
             "type": "main",
             "index": 0
@@ -144,14 +116,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "versionId": "896b4ee2-b8a5-4cba-8139-19ed17c92d97",
-  "meta": {
-    "instanceId": "df37d6788307b056fdfa155b94b2a536941ec059358e27f8415496a034b63ca0"
+    "binaryMode": "separate",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false,
+    "executionTimeout": 110
   },
   "nodeGroups": [],
   "id": "bku0woyeAU1102qM",

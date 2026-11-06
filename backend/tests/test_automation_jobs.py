@@ -29,7 +29,10 @@ def test_empty_import_has_no_periods():
 
 
 def workflow_result() -> dict:
-    return {
+    data = {
+        "schema_version": "2.0",
+        "context": {"job_id": 1, "import_id": "fictitious-import", "workspace_id": 1,
+                    "year": 2026, "month": 12, "attempt": 1, "actor_kind": "automation"},
         "summary": {
             "year": 2026,
             "month": 12,
@@ -47,6 +50,13 @@ def workflow_result() -> dict:
             "alerts": [],
         },
     }
+    data["analysis"] = {
+        "mode": "gemini", "answer": "Sugestões para revisão humana; não aprova despesas.",
+        "tools_used": [{"name": "review_budget_policy",
+                        "arguments": {"year": 2026, "month": 12, "focus": "decision"},
+                        "result": data["summary"], "alerts": [], "evidence": {"missing_data": []}}],
+    }
+    return data
 
 
 def test_accepts_expected_workflow_result():
