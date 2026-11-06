@@ -1,4 +1,5 @@
 import type { FinancialSummary } from './api'
+import type { CampaignAnalytics, DashboardAnalytics } from './dashboard'
 import { authFetch, getApiBaseUrl } from './http'
 
 export type CopilotAlert = {
@@ -30,10 +31,31 @@ export type CopilotResponse = {
     arguments: {
       year: number
       month: number
+      focus?: 'budget' | 'alerts' | 'decision'
+      expense_id?: number | null
+      campaign_id?: number | null
+      campaign_name?: string | null
     }
     result: FinancialSummary | null
     sources: PolicySource[]
     cited_source_ids: string[]
+    evidence?: {
+      status: 'available' | 'missing_identifier' | 'not_found' | 'ambiguous'
+      expense: {
+        id: number
+        category_id: number
+        category_name: string
+        campaign_id: number | null
+        description: string
+        expense_date: string
+        amount: string
+      } | null
+      campaign: CampaignAnalytics | null
+      campaign_limit: string | null
+      analytics: DashboardAnalytics | null
+      missing_data: string[]
+      alert_policy_sources: Record<string, string[]>
+    } | null
     alerts: CopilotAlert[]
     categories?: {
       category_id: number

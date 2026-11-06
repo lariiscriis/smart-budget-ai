@@ -20,6 +20,10 @@ SECTION_PATTERN = re.compile(
 MAX_SECTION_CHARACTERS = 4000
 
 
+class EmptyPolicyCorpus(ValueError):
+    """No documents available, distinct from malformed or stale documents."""
+
+
 @dataclass(frozen=True)
 class PolicyChunk:
     chunk_id: str
@@ -142,7 +146,7 @@ def load_policy_chunks(
     paths = sorted(directory.glob("*.md"))
 
     if not paths:
-        raise ValueError(
+        raise EmptyPolicyCorpus(
             f"Nenhum documento Markdown encontrado em {directory}."
         )
 

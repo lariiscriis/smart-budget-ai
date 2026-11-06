@@ -1,7 +1,7 @@
 # Política de Despesas — Empresa Aurora Fictícia
 
 Documento: POL-DESP-001
-Versão: 1.0
+Versão: 1.1
 Vigência inicial: 2026-01-01
 Finalidade: demonstração do Smart Budget AI.
 Todos os nomes, valores e procedimentos deste documento são fictícios.
@@ -57,3 +57,24 @@ a conclusão deve ser "informações insuficientes".
 
 Não se deve presumir aprovação, irregularidade, quantidade
 de pessoas, quantidade de diárias ou finalidade profissional.
+
+## DESP-07 — Verificação consultiva de lançamento existente
+
+Política fictícia de demonstração da Aurora. A verificação deve consultar o
+lançamento real no espaço de trabalho autenticado e no período selecionado.
+Valor, data, categoria, descrição e vínculo com campanha são evidências
+cadastradas; a descrição é uma declaração e não valida documentos ou autorização.
+
+Recuperar as regras pertinentes à natureza da despesa e indicar a aplicabilidade
+condicionada ao contexto. Separar evidências presentes de dados faltantes.
+Os limites DESP-01 (R$ 80,00 por pessoa/refeição), DESP-02 (R$ 120,00 por viagem),
+DESP-03 (R$ 350,00 por pessoa/diária), exclusões DESP-04 e prazo de 30 dias
+DESP-05 permanecem inalterados. Não comparar totais mensais com limites unitários.
+
+O cadastro atual não armazena comprovante, autorização, finalidade validada,
+pessoas, refeições, diárias, origem, destino ou data de solicitação de reembolso.
+Essas lacunas devem ser informadas conforme a regra analisada. Não presumir
+que tais evidências existem a partir de texto livre ou da pergunta do usuário.
+
+A análise não declara conformidade definitiva, não comprova irregularidade e
+não aprova reembolso. A decisão exige avaliação humana das evidências.

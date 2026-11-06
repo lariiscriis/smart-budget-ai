@@ -2,7 +2,7 @@ from google import genai
 from sqlalchemy.orm import Session
 
 from app.copilot_schemas import PolicyAnswer, PolicySource
-from app.services.policy_documents import load_policy_chunks
+from app.services.policy_documents import EmptyPolicyCorpus, load_policy_chunks
 from app.services.policy_embeddings import embed_texts, similarity
 from app.services.policy_index import load_document_vectors
 
@@ -88,3 +88,36 @@ def format_policy_answer(
         f"{answer.answer.strip()}\n\nFontes:\n{references}",
         cited_ids,
     )
+
+
+def search_analysis_policies(
+    db: Session,
+    client: genai.Client,
+    question: str,
+    required_sections: set[tuple[str, str]],
+) -> list[PolicySource]:
+    """Semantic retrieval plus explicit references needed by a backend analysis.
+
+    Required sections must actually exist in the loaded corpus. Missing sections
+    are never fabricated. Stable document/section identities avoid depending on
+    an alert's wording or on its position in the semantic top three.
+    """
+    try:
+        chunks = load_policy_chunks()
+    except EmptyPolicyCorpus:
+        return []
+    sources = search_financial_policies(db, client, question)
+    present = {(source.document_id, source.section_id) for source in sources}
+    for chunk in chunks:
+        key = (chunk.document_id, chunk.section_id)
+        if key in required_sections and key not in present:
+            sources.append(PolicySource(
+                source_id="pending", document_id=chunk.document_id,
+                version=chunk.version, section_id=chunk.section_id,
+                section_title=chunk.section_title, text=chunk.text,
+                # Explicit lookup, not a semantic similarity measurement.
+                similarity=0.0,
+            ))
+            present.add(key)
+    return [source.model_copy(update={"source_id": f"S{index}"})
+            for index, source in enumerate(sources, 1)]

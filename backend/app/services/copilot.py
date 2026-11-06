@@ -1,3 +1,5 @@
+import re
+
 from google import genai
 from google.genai import types
 from sqlalchemy.orm import Session
@@ -9,14 +11,24 @@ from app.copilot_schemas import (
     SummaryArguments,
     ToolExecution,
     PolicyAnswer,
+    AnalysisEvidence,
+    CampaignReviewArguments,
+    ExpenseReviewArguments,
+    ReviewArguments,
 )
 from app.services.financial import get_monthly_summary
 from app.services.category_comparison import get_category_comparison
 from app.services.alerts import build_alerts
+from app.services.dashboard import get_dashboard_analytics
+from app.services.copilot_analysis import (
+    ALERT_SECTIONS, consult_campaign, consult_expense, link_alert_policies,
+    record_missing_sections, render_analysis, require_workspace,
+)
 
 from app.services.policy_retrieval import (
     format_policy_answer,
     search_financial_policies,
+    search_analysis_policies,
 )
 
 
@@ -38,6 +50,30 @@ Escolha exatamente uma ferramenta:
   despesas permitidas, prazos e procedimentos das políticas fictícias.
 - review_budget_policy: combina dados financeiros do período com
   trechos das políticas para explicar situações e procedimentos.
+  Use focus="alerts" para explicar alertas relacionando cada código calculado
+  à política documental; focus="decision" para preparar resumo para decisão
+  com receitas, despesas, categorias, campanhas, alertas, dúvidas e sugestões.
+- review_expense_policy: consulta uma despesa existente pelo expense_id e
+  recupera políticas com base na categoria/descrição reais. Use para verificar
+  evidências e dados faltantes, nunca para aprovar ou declarar conformidade.
+- compare_campaign_policy: consulta receitas e despesas registradas de uma
+  campanha pelo campaign_id ou campaign_name exato, com políticas e lacunas.
+
+Na seleção de ferramentas e argumentos:
+- Para explicar alertas com regras documentais, use review_budget_policy com
+  focus="alerts". get_financial_alerts serve apenas para listar alertas.
+- Para preparar resumo para decisão, use review_budget_policy com focus="decision".
+- Para analisar despesa ou campanha, use a consulta específica acima.
+- Copie apenas IDs ou nomes exatos informados pelo usuário. Se não houver
+  identificador suficiente, omita-o: a ferramenta pedirá os dados faltantes.
+- Nunca escolha um ID arbitrário nem transforme valores/limites ditos na
+  pergunta em dados cadastrados. Não forneça workspace_id: vem da autenticação.
+- Não use orçamento de categoria como limite de campanha. Sem limite
+  explicitamente cadastrado para a campanha, informe que não há limite definido.
+- Receitas vinculadas não demonstram causalidade; diferença entre receitas e
+  despesas registradas não é lucro sem evidência de custos completos.
+- Recomendações são sugestões para decisão humana; não grave, aprove,
+  altere orçamento, dispare automações ou declare conformidade definitiva.
 
 Para perguntas sobre políticas:
 - Use search_financial_policies.
@@ -107,10 +143,16 @@ def execute_summary_tool(
 def execute_selected_tool(
     name: str,
     db: Session,
-    arguments: SummaryArguments,
+    arguments: SummaryArguments | ReviewArguments | ExpenseReviewArguments | CampaignReviewArguments,
     question: str = "",
     client: genai.Client | None = None,
 ) -> ToolExecution:
+    # Validate again at the dispatch boundary, including direct service callers.
+    schema = TOOL_ARGUMENTS.get(name)
+    if schema is None:
+        raise RuntimeError("O modelo não solicitou a ferramenta esperada.")
+    arguments = schema.model_validate(arguments.model_dump())
+
     if name == "get_budget_summary":
         return execute_summary_tool(db, arguments)
 
@@ -147,11 +189,33 @@ def execute_selected_tool(
             sources=search_financial_policies(db, client, question),
         )
 
+    if name in {"review_expense_policy", "compare_campaign_policy"}:
+        if client is None:
+            raise RuntimeError("A análise com políticas precisa de um cliente Gemini.")
+        if name == "review_expense_policy":
+            evidence = consult_expense(db, arguments)
+            required = {("POL-DESP-001", "DESP-06"), ("POL-DESP-001", "DESP-07")}
+            query = question
+            if evidence.expense:
+                query += (f"\nDados de referência da despesa: categoria {evidence.expense.category_name!r}; "
+                          f"descrição {evidence.expense.description!r}. "
+                          "Regras de despesas, comprovante, autorização e prazo de reembolso.")
+        else:
+            evidence = consult_campaign(db, arguments)
+            required = {("POL-CAMP-001", f"CAMP-{index:02d}") for index in range(1, 5)}
+            query = question + "\nCampanha: receitas e despesas registradas, limite cadastrado, custos e causalidade."
+        sources = search_analysis_policies(db, client, query, required)
+        record_missing_sections(evidence, sources, required)
+        return ToolExecution(name=name, arguments=arguments, evidence=evidence, sources=sources)
+
     if name == "review_budget_policy":
         if client is None:
             raise RuntimeError(
                 "A análise com políticas precisa de um cliente Gemini."
             )
+
+        if arguments.focus in {"alerts", "decision"}:
+            require_workspace(db)
 
         comparison = get_category_comparison(
             db,
@@ -159,22 +223,68 @@ def execute_selected_tool(
             arguments.month,
         )
 
-        sources = search_financial_policies(
-            db,
-            client,
-            question,
-        )
+        alerts = build_alerts(comparison)
+        if arguments.focus == "budget":
+            sources = search_financial_policies(db, client, question)
+            evidence = None
+        else:
+            required = {("POL-ORC-001", ALERT_SECTIONS[alert.code]) for alert in alerts}
+            required |= {("POL-ORC-001", "ORC-05"), ("POL-ORC-001", "ORC-06"), ("POL-ORC-001", "ORC-08")}
+            evidence = AnalysisEvidence(missing_data=[
+                "Causa dos desvios e documentação das despesas não verificadas.",
+                "Ausência de alerta não demonstra conformidade com a política de reembolso.",
+            ])
+            if arguments.focus == "decision":
+                evidence.analytics = get_dashboard_analytics(db, arguments.year, arguments.month, months=1)
+                evidence.missing_data += [
+                    "Limites internos de campanhas não cadastrados; não há limite definido.",
+                    "Completude de custos e atribuição causal das receitas não verificadas.",
+                ]
+                required |= {("POL-DEC-001", f"DEC-{index:02d}") for index in range(1, 4)}
+                required |= {("POL-CAMP-001", "CAMP-02"), ("POL-CAMP-001", "CAMP-03")}
+            sources = search_analysis_policies(db, client, question, required)
+            record_missing_sections(evidence, sources, required)
 
-        return ToolExecution(
+        execution = ToolExecution(
             name=name,
             arguments=arguments,
             result=comparison.summary,
             categories=comparison.categories,
-            alerts=build_alerts(comparison),
+            alerts=alerts,
             sources=sources,
+            evidence=evidence,
         )
+        if evidence is not None:
+            link_alert_policies(execution)
+        return execution
 
     raise RuntimeError("O modelo não solicitou a ferramenta esperada.")
+
+
+TOOL_ARGUMENTS = {
+    "get_budget_summary": SummaryArguments,
+    "compare_categories": SummaryArguments,
+    "get_financial_alerts": SummaryArguments,
+    "search_financial_policies": SummaryArguments,
+    "review_budget_policy": ReviewArguments,
+    "review_expense_policy": ExpenseReviewArguments,
+    "compare_campaign_policy": CampaignReviewArguments,
+}
+
+
+def validate_user_reference(arguments: SummaryArguments, question: str) -> None:
+    """Prevent the selector from manufacturing an entity ID/name."""
+    for field in ("expense_id", "campaign_id"):
+        identifier = getattr(arguments, field, None)
+        if identifier is None:
+            continue
+        label = "despesa|lançamento|lancamento" if field == "expense_id" else "campanha"
+        mentioned = re.findall(rf"(?:\b(?:id|{label})\s*[:#]?\s*|#)(\d+)\b", question, re.IGNORECASE)
+        if str(identifier) not in mentioned:
+            raise RuntimeError("O modelo solicitou um identificador não fornecido pelo usuário.")
+    name = getattr(arguments, "campaign_name", None)
+    if name is not None and name not in question:
+        raise RuntimeError("O modelo solicitou um nome de campanha não fornecido pelo usuário.")
 
 def ask_copilot(
     db: Session,
@@ -209,9 +319,19 @@ def ask_copilot(
             "diaria",
             "multa",
             "comprovante",
+            "campanha",
+            "decisão",
+            "decisao",
+            "verifique",
+            "verificar",
+            "despesa id",
+            "despesa #",
         )
 
-        if any(term in question for term in policy_terms):
+        if any(term in question for term in policy_terms) or (
+            any(term in question for term in ("explique", "explicar", "explique-me"))
+            and any(term in question for term in alert_terms)
+        ):
             return CopilotResponse(
                 mode="mock",
                 answer=(
@@ -324,9 +444,29 @@ def ask_copilot(
                 "alertas determinísticos e trechos das políticas fictícias. "
                 "Use quando a pergunta combinar dados reais do período "
                 "com recomendações ou regras documentais. "
+                "Use focus=alerts para explicar alertas com políticas; "
+                "focus=decision para preparar resumo para decisão com analytics. "
                 "Não comprova conformidade de despesas individuais."
             ),
-            parameters_json_schema=SummaryArguments.model_json_schema(),
+            parameters_json_schema=ReviewArguments.model_json_schema(),
+        ),
+        types.FunctionDeclaration(
+            name="review_expense_policy",
+            description=(
+                "Consulta uma despesa existente pelo ID no período e espaço autenticados, "
+                "recupera políticas e informa evidências e lacunas, sem aprovar reembolso. "
+                "Use apenas o ID fornecido na pergunta; omita se ausente."
+            ),
+            parameters_json_schema=ExpenseReviewArguments.model_json_schema(),
+        ),
+        types.FunctionDeclaration(
+            name="compare_campaign_policy",
+            description=(
+                "Consulta totais de receitas e despesas registrados para uma campanha, "
+                "com políticas e lacunas. Use somente o ID ou nome exato fornecido pelo usuário. "
+                "Sem limite cadastrado, não compara com orçamento. Não demonstra causalidade ou lucro."
+            ),
+            parameters_json_schema=CampaignReviewArguments.model_json_schema(),
         ),
     ]
 
@@ -367,22 +507,18 @@ def ask_copilot(
 
         calls = first.function_calls or []
 
-        allowed_names = {
-            "get_budget_summary",
-            "compare_categories",
-            "get_financial_alerts",
-            "search_financial_policies",
-            "review_budget_policy",
-                            }
+        allowed_names = set(TOOL_ARGUMENTS)
 
         if len(calls) != 1 or calls[0].name not in allowed_names:
             raise RuntimeError("O modelo não solicitou a ferramenta esperada.")
 
         call = calls[0]
-        arguments = SummaryArguments.model_validate(call.args or {})
+        arguments = TOOL_ARGUMENTS[call.name].model_validate(call.args or {})
 
-        if arguments != selected:
+        if (arguments.year, arguments.month) != (selected.year, selected.month):
             raise RuntimeError("O modelo solicitou um período diferente do selecionado.")
+
+        validate_user_reference(arguments, payload.question)
 
         execution = execute_selected_tool(
             call.name,
@@ -391,6 +527,11 @@ def ask_copilot(
             question=payload.question,
             client=client,
         )
+
+        if execution.evidence is not None:
+            return CopilotResponse(
+                mode="gemini", answer=render_analysis(execution), tools_used=[execution],
+            )
 
         if not first.candidates or first.candidates[0].content is None:
             raise RuntimeError("A resposta do modelo não contém a chamada original.")
